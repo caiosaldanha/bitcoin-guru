@@ -125,8 +125,12 @@ def api_predict():
     if df.empty:
         raise HTTPException(404, 'No data')
     df['date'] = pd.to_datetime(df['date'])
-    df = make_features(df)
-    row = df.dropna().iloc[-1]
+    # compute features and drop rows with NaNs
+    df_feat = make_features(df)
+    df_clean = df_feat.dropna()
+    if df_clean.empty:
+        raise HTTPException(404, 'Not enough data to predict')
+    row = df_clean.iloc[-1]
     # Load model
     model_obj = joblib.load(MODEL_PATH)
     model, FEATURES = model_obj['model'], model_obj['features']
