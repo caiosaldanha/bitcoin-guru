@@ -60,6 +60,7 @@ def index():
             app.logger.info("[DEBUG] /predict converted: %s", pred['data'])
     except Exception as e:
         pred = {'error': f'Erro ao acessar API /predict: {e}'}
+    
     try:
         r_hist = requests.get(f"{API_URL}/history?limit=10", timeout=10)
         r_hist.raise_for_status()
@@ -70,7 +71,20 @@ def index():
             app.logger.info("[DEBUG] /history converted: %s", hist['data'])
     except Exception as e:
         hist = {'error': f'Erro ao acessar API /history: {e}'}
-    return render_template("index.html", pred=pred, hist=hist)
+    
+    # Buscando dados de preços históricos
+    try:
+        r_prices = requests.get(f"{API_URL}/prices?days=30", timeout=10)
+        r_prices.raise_for_status()
+        prices = r_prices.json()
+        app.logger.info("[DEBUG] /prices raw: %s", prices)
+        if 'data' in prices:
+            prices['data'] = convert_to_col_dict(prices)
+            app.logger.info("[DEBUG] /prices converted: %s", prices['data'])
+    except Exception as e:
+        prices = {'error': f'Erro ao acessar API /prices: {e}'}
+    
+    return render_template("index.html", pred=pred, hist=hist, prices=prices)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

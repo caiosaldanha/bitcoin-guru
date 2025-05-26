@@ -1,65 +1,256 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bitcoin Guru - Previsão</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .recommendation-card {
+            border-left: 5px solid;
+            transition: all 0.3s ease;
+        }
+        .buy {
+            border-left-color: #28a745;
+            background-color: rgba(40, 167, 69, 0.1);
+        }
+        .sell {
+            border-left-color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+        .hold {
+            border-left-color: #ffc107;
+            background-color: rgba(255, 193, 7, 0.1);
+        }
+        .price-card {
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, #6c757d 0%, #343a40 100%);
+            color: white;
+        }
+        .price-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .metrics-badge {
+            margin-right: 8px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        .header-title {
+            font-weight: 700;
+            color: #343a40;
+        }
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-<div class="container mt-4">
-    <h1 class="mb-4">Bitcoin Guru</h1>
+<div class="container mt-4 mb-5">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+            <h1 class="header-title"><i class="fas fa-bitcoin text-warning me-2"></i>Bitcoin Guru</h1>
+            <p class="text-muted">Sua consultoria inteligente para investimentos em Bitcoin</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <p class="mb-0 text-muted"><small>Data da análise: {{ pred['data']['date'][0] if pred.get('data') and pred['data'].get('date') else 'Indisponível' }}</small></p>
+        </div>
+    </div>
+
+    {% if pred.get('error') %}
+        <div class="alert alert-danger">{{ pred['error'] }}</div>
+    {% elif pred.get('data') and pred['data'].get('date') %}
+        {% set current_price = pred['data']['price_now'][0]|float %}
+        {% set future_price = pred['data']['pred_7d'][0]|float %}
+        {% set percent_change = ((future_price - current_price) / current_price * 100)|round(2) %}
+        {% set recommendation = "COMPRAR" if percent_change > 2 else ("VENDER" if percent_change < -2 else "MANTER") %}
+        {% set card_class = "buy" if recommendation == "COMPRAR" else ("sell" if recommendation == "VENDER" else "hold") %}
+        {% set icon_class = "fa-arrow-trend-up" if recommendation == "COMPRAR" else ("fa-arrow-trend-down" if recommendation == "VENDER" else "fa-grip-lines") %}
+        
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card recommendation-card {{ card_class }}">
+                    <div class="card-body">
+                        <h2 class="card-title">
+                            <i class="fas {{ icon_class }} me-2"></i>
+                            Recomendação: <strong>{{ recommendation }}</strong>
+                        </h2>
+                        <p class="card-text lead">
+                            {% if recommendation == "COMPRAR" %}
+                                Nossos modelos indicam uma alta de <strong class="text-success">{{ percent_change }}%</strong> nos próximos 7 dias.
+                                É um bom momento para investir em Bitcoin!
+                            {% elif recommendation == "VENDER" %}
+                                Nossos modelos preveem uma queda de <strong class="text-danger">{{ percent_change|abs }}%</strong> nos próximos 7 dias.
+                                Considere vender ou aguardar por um melhor momento para comprar.
+                            {% else %}
+                                O preço deve permanecer estável ({{ percent_change }}%) nos próximos 7 dias.
+                                Mantenha seus investimentos e monitore o mercado.
+                            {% endif %}
+                        </p>
+                        <div class="mt-3">
+                            <span class="badge bg-secondary metrics-badge" title="Erro Médio Absoluto (treino)">
+                                <i class="fas fa-chart-line me-1"></i> MAE: ${{ pred['data']['mae_train'][0]|round(2) }}
+                            </span>
+                            <span class="badge bg-secondary metrics-badge" title="Coeficiente de Determinação (treino)">
+                                <i class="fas fa-square-root-variable me-1"></i> R²: {{ pred['data']['r2_train'][0]|round(2) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <div class="price-card">
+                            <h6>Preço Atual</h6>
+                            <div class="price-value">${{ current_price|round(2)|int }}</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="price-card">
+                            <h6>Previsão (7 dias)</h6>
+                            <div class="price-value">${{ future_price|round(2)|int }}</div>
+                            <span class="badge {{ 'bg-success' if percent_change > 0 else ('bg-danger' if percent_change < 0 else 'bg-warning') }}">
+                                <i class="fas {{ 'fa-arrow-up' if percent_change > 0 else ('fa-arrow-down' if percent_change < 0 else 'fa-equals') }}"></i>
+                                {{ percent_change }}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">Sem dados de previsão disponíveis.</div>
+    {% endif %}
+
     <div class="card mb-4">
         <div class="card-body">
-            <h5 class="card-title">Última Previsão</h5>
-            {% if pred.get('error') %}
-                <div class="alert alert-danger">{{ pred['error'] }}</div>
-            {% elif pred.get('data') and pred['data'].get('date') %}
-                <ul>
-                    <li><b>Data:</b> {{ pred['data']['date'][0] }}</li>
-                    <li><b>Preço Atual:</b> ${{ pred['data']['price_now'][0]|round(2) }}</li>
-                    <li><b>Previsão 7 dias:</b> ${{ pred['data']['pred_7d'][0]|round(2) }}</li>
-                    <li><b>MAE (treino):</b> ${{ pred['data']['mae_train'][0]|round(2) }}</li>
-                    <li><b>R² (treino):</b> {{ pred['data']['r2_train'][0]|round(2) }}</li>
-                </ul>
+            <h5 class="card-title"><i class="fas fa-chart-line me-2"></i>Cotações dos Últimos 30 Dias</h5>
+            {% if prices.get('error') %}
+                <div class="alert alert-danger">{{ prices['error'] }}</div>
+            {% elif prices.get('data') and prices['data'].get('date') %}
+                <div class="chart-container">
+                    <canvas id="pricesChart"></canvas>
+                </div>
             {% else %}
-                <div class="alert alert-warning">Sem dados de previsão disponíveis.</div>
+                <div class="alert alert-warning">Dados de cotações não disponíveis.</div>
             {% endif %}
         </div>
     </div>
-    <div class="card mb-4">
+
+    <div class="card">
         <div class="card-body">
-            <h5 class="card-title">Histórico de Previsões</h5>
+            <h5 class="card-title"><i class="fas fa-history me-2"></i>Histórico de Previsões</h5>
             {% if hist.get('error') %}
                 <div class="alert alert-danger">{{ hist['error'] }}</div>
+            {% elif hist.get('data') and hist['data'].get('date') %}
+                <div class="chart-container">
+                    <canvas id="historyChart"></canvas>
+                </div>
             {% else %}
-                <canvas id="historyChart"></canvas>
+                <div class="alert alert-warning">Sem histórico de previsões disponível.</div>
             {% endif %}
         </div>
     </div>
 </div>
-{% if not hist.get('error') %}
-    <script type="text/javascript">
-        var hist = {{ hist|tojson|safe }};
-        var labels = hist.data.date;
-        var data = hist.data.pred_7d;
-        new Chart(document.getElementById('historyChart'), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Previsão 7 dias',
-                    data: data,
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
-                }]
+
+<a href="/" class="btn btn-primary refresh-btn" title="Atualizar previsão">
+    <i class="fas fa-sync-alt"></i>
+</a>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+{% if not hist.get('error') and hist.get('data') and hist['data'].get('date') %}
+<script type="text/javascript">
+    // Gráfico do histórico de previsões
+    var histLabels = {{ hist['data']['run_ts']|tojson|safe if hist['data'].get('run_ts') else hist['data']['date']|tojson|safe }};
+    var histData = {{ hist['data']['pred_7d']|tojson|safe }};
+    new Chart(document.getElementById('historyChart'), {
+        type: 'line',
+        data: {
+            labels: histLabels,
+            datasets: [{
+                label: 'Previsão para 7 dias',
+                data: histData,
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true },
+                tooltip: { mode: 'index', intersect: false }
             },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } }
+            scales: {
+                y: { 
+                    ticks: { callback: function(value) { return '$' + value.toLocaleString(); } }
+                }
             }
-        });
-    </script>
+        }
+    });
+</script>
+{% endif %}
+
+{% if not prices.get('error') and prices.get('data') and prices['data'].get('date') %}
+<script type="text/javascript">
+    // Gráfico das cotações dos últimos 30 dias
+    var priceLabels = {{ prices['data']['date']|tojson|safe }};
+    var priceData = {{ prices['data']['price']|tojson|safe }};
+    
+    new Chart(document.getElementById('pricesChart'), {
+        type: 'line',
+        data: {
+            labels: priceLabels,
+            datasets: [{
+                label: 'Preço do Bitcoin (USD)',
+                data: priceData,
+                borderColor: 'rgb(234, 179, 8)',
+                backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                y: { 
+                    ticks: { callback: function(value) { return '$' + value.toLocaleString(); } }
+                }
+            }
+        }
+    });
+</script>
 {% endif %}
 </body>
 </html>

@@ -194,6 +194,14 @@ def api_history(limit: int = Query(10)):
         df = pd.read_sql(f'SELECT * FROM predictions ORDER BY run_ts DESC LIMIT {limit}', conn)
     return JSONResponse(content=df.to_dict(orient='split'))
 
+@router.get('/prices')
+def api_prices(days: int = Query(30)):
+    """Retorna os preços históricos para os últimos N dias."""
+    with engine.begin() as conn:
+        df = pd.read_sql(f'SELECT date, price FROM btc_data ORDER BY date DESC LIMIT {days}', conn)
+    df = df.sort_values('date')
+    return JSONResponse(content=df.to_dict(orient='split'))
+
 @router.get('/dbdump')
 def dump_db():
     """Retorna todos os dados da tabela btc_data para debug/checagem."""
