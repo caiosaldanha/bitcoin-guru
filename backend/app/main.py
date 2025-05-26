@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query, APIRouter
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import create_engine, text
 import pandas as pd
@@ -111,8 +111,9 @@ def api_refresh(force: bool = Query(False)):
     try:
         changed = fetch_and_insert(force=force)
         if not changed:
-            return JSONResponse(status_code=204, content={'detail': 'Already up to date'})
-        return {'detail': 'Data refreshed and model retrained'}
+            # return explicit empty body for 204 No Content
+            return Response(content="", status_code=204)
+        return JSONResponse(content={'detail': 'Data refreshed and model retrained'})
     except Exception as e:
         tb = traceback.format_exc()
         print('API /refresh failed:', e, tb)
