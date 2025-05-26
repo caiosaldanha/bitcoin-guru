@@ -205,9 +205,14 @@ def dump_db():
 def reset_db():
     """Deleta o arquivo do banco SQLite e reinicializa o banco com bootstrap de 365 dias."""
     import shutil
+    global engine
     try:
+        # Dispose engine to close all connections
+        engine.dispose()
         if os.path.exists(DB_PATH):
             os.remove(DB_PATH)
+        # Recreate engine after file removal
+        engine = create_engine(f'sqlite:///{DB_PATH}', connect_args={"check_same_thread": False})
         init_db()
         fetch_and_insert(force=True)
         return {"detail": "Banco resetado e recarregado com histórico."}
