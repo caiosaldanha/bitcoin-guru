@@ -14,7 +14,7 @@
             <h5 class="card-title">Última Previsão</h5>
             {% if pred.get('error') %}
                 <div class="alert alert-danger">{{ pred['error'] }}</div>
-            {% else %}
+            {% elif pred.get('data') and pred['data'].get('date') %}
                 <ul>
                     <li><b>Data:</b> {{ pred['data']['date'][0] }}</li>
                     <li><b>Preço Atual:</b> ${{ pred['data']['price_now'][0]|round(2) }}</li>
@@ -22,6 +22,8 @@
                     <li><b>MAE (treino):</b> ${{ pred['data']['mae_train'][0]|round(2) }}</li>
                     <li><b>R² (treino):</b> {{ pred['data']['r2_train'][0]|round(2) }}</li>
                 </ul>
+            {% else %}
+                <div class="alert alert-warning">Sem dados de previsão disponíveis.</div>
             {% endif %}
         </div>
     </div>
