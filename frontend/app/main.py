@@ -126,8 +126,26 @@ def index():
             app.logger.info("Backend inicializado com sucesso: %s", r_refresh.json())
         except Exception as e:
             app.logger.error("Falha ao inicializar backend: %s", e)
+      return render_template("index.html", pred=pred, hist=hist, prices=prices)
+
+@app.route("/clear_predictions")
+def clear_predictions():
+    """Rota para limpar as previsões e redirecionar para a página principal."""
+    message = ""
+    try:
+        app.logger.info("Limpando tabela de previsões via API")
+        response = requests.post(f"{API_URL}/clear_predictions", timeout=10)
+        response.raise_for_status()
+        app.logger.info("Tabela de previsões limpa com sucesso")
+        message = "Histórico de previsões limpo com sucesso!"
+    except Exception as e:
+        app.logger.error(f"Erro ao limpar previsões: {e}")
+        message = f"Erro ao limpar previsões: {e}"
     
-    return render_template("index.html", pred=pred, hist=hist, prices=prices)
+    # Redirecionar para a página principal com mensagem
+    from flask import redirect, url_for, flash
+    # Redirecione para a página principal
+    return redirect(url_for('index'))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

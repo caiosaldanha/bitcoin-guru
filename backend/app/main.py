@@ -291,21 +291,40 @@ def api_predict():
         # Importar aqui para evitar problemas de dependência
         from sklearn.metrics import mean_absolute_error, r2_score
         mae = float(mean_absolute_error(y_train, y_pred))
-        r2 = float(r2_score(y_train, y_pred))
+        r2 = float(r2_score(y_train, y_pred))        # Save prediction
+        # Usamos a data atual como base para evitar duplicação
+        from datetime import datetime, timedelta
         
-        # Save prediction
+        # Usamos a data atual (hoje) como base
+        today = datetime.now()
+        today_str = today.strftime('%Y-%m-%d')
+        
+        # A data para a qual estamos prevendo (hoje + 7 dias)
+        future_date = (today + timedelta(days=7)).strftime('%Y-%m-%d')
+        
         with engine.begin() as conn:
-            conn.execute(text('INSERT INTO predictions (date, pred_7d) VALUES (:date, :pred_7d)'), 
-                        {'date': row['date'].strftime('%Y-%m-%d'), 'pred_7d': pred_7d})
+            # Verificamos se já fizemos uma previsão hoje
+            exists_query = text("""
+            SELECT 1 FROM predictions 
+            WHERE date(run_ts) = date('now') 
+            AND date = :date
+            """)
+            exists = conn.execute(exists_query, {"date": future_date}).fetchone()
             
-        print(f"Predição realizada com sucesso: {pred_7d}")
+            if not exists:
+                # Salvamos a previsão com a data futura (para quando estamos prevendo)
+                conn.execute(text('INSERT INTO predictions (date, pred_7d) VALUES (:date, :pred_7d)'), 
+                            {'date': future_date, 'pred_7d': pred_7d})
+                print(f"Predição realizada com sucesso: {pred_7d} para {future_date}")
+            else:
+                print(f"Já existe uma previsão para {future_date} feita hoje, não inserindo duplicata")
     except Exception as e:
         print(f"Erro na predição: {e}")
         traceback.print_exc()
-        raise HTTPException(500, f"Erro ao fazer predição: {str(e)}")
-    # Response
+        raise HTTPException(500, f"Erro ao fazer predição: {str(e)}")    # Response
     out = pd.DataFrame({
         'date': [row['date'].strftime('%Y-%m-%d')],
+        'forecast_date': [future_date],  # Adicionando a data para a qual estamos prevendo
         'price_now': [row['price']],
         'pred_7d': [pred_7d],
         'mae_train': [mae],
@@ -326,8 +345,7 @@ def api_history(limit: int = Query(10), window_days: int = Query(30)):
         JSONResponse com os dados das previsões mais recentes para datas diferentes
     """
     try:
-        with engine.begin() as conn:            # Vamos simplificar a abordagem para evitar problemas com parâmetros
-            # Em vez de buscar datas únicas primeiro, podemos fazer uma consulta mais direta
+        with engine.begin() as conn:            # Vamos simplificar a abordagem para evitar problemas com parâmetros            # Consulta para pegar a previsão mais recente para cada data única
             query = """
             SELECT p.id, p.run_ts, p.date, p.pred_7d 
             FROM predictions p
@@ -336,25 +354,23 @@ def api_history(limit: int = Query(10), window_days: int = Query(30)):
                 FROM predictions 
                 GROUP BY date
                 ORDER BY date DESC
-                LIMIT ?
             ) latest
             ON p.date = latest.date AND p.run_ts = latest.max_ts
             ORDER BY p.date DESC
             """
             
-            # Passamos um parâmetro único como tupla ou dicionário conforme exigido pelo SQLAlchemy
-            df = pd.read_sql(query, conn, params=(window_days,))
+            # Buscar todas as previsões distintas por data e depois limitar
+            df = pd.read_sql(query, conn)
             
             if len(df) == 0:
                 print("Nenhuma data encontrada nas previsões")
                 return JSONResponse(content={"columns": [], "data": []})
-                  # Limitamos os resultados após a consulta
-            df = df.head(limit)
+                
+            # Eliminar duplicatas de data e limitar o resultado
+            df = df.drop_duplicates(subset=['date']).head(limit)
             
-            # Se não temos dados suficientes, pegamos as previsões mais recentes
-            if len(df) < limit:
-                print(f"Poucas previsões únicas ({len(df)}), buscando mais")
-                df = pd.read_sql("SELECT * FROM predictions ORDER BY run_ts DESC LIMIT ?", conn, params=(limit,))
+            # Se não temos dados suficientes, não precisamos buscar mais
+            # Isso vai manter a abordagem de 1 previsão por data
             
             print(f"Histórico retornado: {len(df)} previsões para {len(df['date'].unique())} datas únicas")
             
@@ -398,6 +414,16 @@ def reset_db():
         init_db()
         fetch_and_insert(force=True)
         return {"detail": "Banco resetado e recarregado com histórico."}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+@router.post('/clear_predictions')
+def clear_predictions():
+    """Limpa a tabela de previsões para começar do zero."""
+    try:
+        with engine.begin() as conn:
+            conn.execute(text('DELETE FROM predictions'))
+        return {"detail": "Tabela de previsões limpa com sucesso."}
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": str(e)})
 
