@@ -54,6 +54,32 @@ def make_features(df):
 
 # --- Data Fetch & Insert ---
 def fetch_and_insert(force=False):
+    # initial bootstrap: load 365 days if table empty
+    with engine.begin() as conn:
+        cnt = conn.execute(text('SELECT COUNT(*) FROM btc_data')).scalar()
+    if cnt == 0:
+        # fetch 365 days of history
+        url_hist = 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365'
+        resp = requests.get(url_hist, timeout=30)
+        hist = resp.json()
+        if 'prices' not in hist:
+            raise HTTPException(502, 'CoinGecko API error for initial load')
+        df_hist = pd.DataFrame(hist['prices'], columns=['ts', 'price'])
+        df_hist['date'] = pd.to_datetime(df_hist['ts'], unit='ms').dt.strftime('%Y-%m-%d')
+        df_hist = df_hist.groupby('date').last().reset_index()
+        df_hist['date'] = pd.to_datetime(df_hist['date'])
+        df_feat = make_features(df_hist)
+        df_clean = df_feat.dropna()
+        with engine.begin() as conn:
+            for _, row in df_clean.iterrows():
+                params = row.to_dict()
+                params['date'] = row['date'].strftime('%Y-%m-%d')
+                conn.execute(text(
+                    'INSERT OR REPLACE INTO btc_data (date, price, lag_1, lag_2, lag_3, lag_4, lag_5, lag_6, lag_7, ma_7, ma_14, ret_1d, ret_7d, dow) VALUES (:date, :price, :lag_1, :lag_2, :lag_3, :lag_4, :lag_5, :lag_6, :lag_7, :ma_7, :ma_14, :ret_1d, :ret_7d, :dow)'
+                ), params)
+        retrain_model()
+        return True
+    # incremental insert (existing logic)
     url = 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1'
     r = requests.get(url, timeout=10)
     data = r.json()
