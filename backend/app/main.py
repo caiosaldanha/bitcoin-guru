@@ -74,7 +74,10 @@ def fetch_and_insert(force=False):
         df = make_features(df)
         row = df.iloc[-1]
         # Insert
-        conn.execute(text('''INSERT OR REPLACE INTO btc_data (date, price, lag_1, lag_2, lag_3, lag_4, lag_5, lag_6, lag_7, ma_7, ma_14, ret_1d, ret_7d, dow) VALUES (:date, :price, :lag_1, :lag_2, :lag_3, :lag_4, :lag_5, :lag_6, :lag_7, :ma_7, :ma_14, :ret_1d, :ret_7d, :dow)'''), row.to_dict())
+        params = row.to_dict()
+        # convert pandas Timestamp to string for SQLite
+        params['date'] = row['date'].strftime('%Y-%m-%d')
+        conn.execute(text('''INSERT OR REPLACE INTO btc_data (date, price, lag_1, lag_2, lag_3, lag_4, lag_5, lag_6, lag_7, ma_7, ma_14, ret_1d, ret_7d, dow) VALUES (:date, :price, :lag_1, :lag_2, :lag_3, :lag_4, :lag_5, :lag_6, :lag_7, :ma_7, :ma_14, :ret_1d, :ret_7d, :dow)'''), params)
     retrain_model()
     return True
 
