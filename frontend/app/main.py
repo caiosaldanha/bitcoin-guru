@@ -56,7 +56,7 @@ def index():
         pred = r.json()
         app.logger.info("[DEBUG] /predict raw: %s", pred)
         if 'data' in pred:
-            pred['data'] = convert_to_col_dict(pred['data'])
+            pred['data'] = convert_to_col_dict(pred)
             app.logger.info("[DEBUG] /predict converted: %s", pred['data'])
     except Exception as e:
         pred = {'error': f'Erro ao acessar API /predict: {e}'}
@@ -66,7 +66,7 @@ def index():
         hist = r_hist.json()
         app.logger.info("[DEBUG] /history raw: %s", hist)
         if 'data' in hist:
-            hist['data'] = convert_to_col_dict(hist['data'])
+            hist['data'] = convert_to_col_dict(hist)
             app.logger.info("[DEBUG] /history converted: %s", hist['data'])
     except Exception as e:
         hist = {'error': f'Erro ao acessar API /history: {e}'}
