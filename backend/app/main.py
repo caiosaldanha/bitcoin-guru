@@ -16,6 +16,9 @@ import traceback
 DB_PATH = '/data/db.sqlite'
 MODEL_PATH = 'models/btc_linreg.pkl'
 
+# Garantir que a pasta models exista
+os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+
 app = FastAPI(docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url="/api/redoc")
 router = APIRouter(prefix="/api")
 scheduler = BackgroundScheduler()
@@ -39,7 +42,37 @@ def init_db():
             pred_7d REAL
         )'''))
 
-init_db()
+# --- BOOTSTRAP ---
+def bootstrap_app():
+    """Inicializa o banco de dados e garante que o modelo esteja treinado."""
+    print("Iniciando bootstrap da aplicação...")
+    
+    # Inicializa o banco de dados
+    init_db()
+    
+    try:
+        # Verifica se existem dados no banco
+        with engine.begin() as conn:
+            count = conn.execute(text('SELECT COUNT(*) FROM btc_data')).scalar()
+        
+        print(f"Banco de dados tem {count} registros")
+        
+        # Se o banco estiver vazio, busca dados históricos
+        if count == 0:
+            print("Buscando dados históricos iniciais...")
+            fetch_and_insert(force=True)
+        
+        # Verifica se o modelo existe, caso contrário treina
+        if not os.path.exists(MODEL_PATH):
+            print("Modelo não encontrado. Treinando modelo com dados existentes...")
+            retrain_model()
+            print(f"Modelo treinado e salvo em: {MODEL_PATH}")
+    except Exception as e:
+        print(f"Erro durante bootstrap: {e}")
+        traceback.print_exc()
+
+# Executa o bootstrap na inicialização
+bootstrap_app()
 
 # --- Bootstrap ---
 def bootstrap_app():

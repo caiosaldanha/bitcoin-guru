@@ -2,20 +2,19 @@ from flask import Flask, render_template, jsonify, request
 import requests
 import pandas as pd
 import os
-import locale
 
 API_URL = os.environ.get("API_URL", "https://bitcoinguru.ml.caiosaldanha.com/api")
 
 app = Flask(__name__)
 
-# Configurar locale para formatação de números
-locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-
-# Filtro personalizado para formatar números
+# Filtro personalizado para formatar números sem depender de locale
 @app.template_filter('format_number')
 def format_number(value):
     try:
-        return locale.format_string("%d", int(value), grouping=True)
+        # Converte para inteiro
+        num = int(value)
+        # Formata com separador de milhar
+        return "{:,}".format(num).replace(",", ".")
     except (ValueError, TypeError):
         return value
 
@@ -62,7 +61,9 @@ def convert_to_col_dict(data):
 
 @app.route("/")
 def index():
+    # Tentar obter a previsão mais recente
     try:
+        app.logger.info("Buscando previsão em %s", f"{API_URL}/predict")
         r = requests.get(f"{API_URL}/predict", timeout=10)
         r.raise_for_status()
         pred = r.json()
@@ -70,10 +71,16 @@ def index():
         if 'data' in pred:
             pred['data'] = convert_to_col_dict(pred)
             app.logger.info("[DEBUG] /predict converted: %s", pred['data'])
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
+        app.logger.error("Erro ao acessar API /predict: %s", e)
         pred = {'error': f'Erro ao acessar API /predict: {e}'}
+    except Exception as e:
+        app.logger.error("Erro ao processar dados de /predict: %s", e)
+        pred = {'error': f'Erro ao processar dados: {e}'}
     
+    # Tentar obter o histórico de previsões
     try:
+        app.logger.info("Buscando histórico em %s", f"{API_URL}/history?limit=10")
         r_hist = requests.get(f"{API_URL}/history?limit=10", timeout=10)
         r_hist.raise_for_status()
         hist = r_hist.json()
@@ -81,11 +88,16 @@ def index():
         if 'data' in hist:
             hist['data'] = convert_to_col_dict(hist)
             app.logger.info("[DEBUG] /history converted: %s", hist['data'])
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
+        app.logger.error("Erro ao acessar API /history: %s", e)
         hist = {'error': f'Erro ao acessar API /history: {e}'}
+    except Exception as e:
+        app.logger.error("Erro ao processar dados de /history: %s", e)
+        hist = {'error': f'Erro ao processar dados: {e}'}
     
-    # Buscando dados de preços históricos
+    # Tentar obter preços históricos para o gráfico
     try:
+        app.logger.info("Buscando preços em %s", f"{API_URL}/prices?days=30")
         r_prices = requests.get(f"{API_URL}/prices?days=30", timeout=10)
         r_prices.raise_for_status()
         prices = r_prices.json()
@@ -93,8 +105,22 @@ def index():
         if 'data' in prices:
             prices['data'] = convert_to_col_dict(prices)
             app.logger.info("[DEBUG] /prices converted: %s", prices['data'])
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
+        app.logger.error("Erro ao acessar API /prices: %s", e)
         prices = {'error': f'Erro ao acessar API /prices: {e}'}
+    except Exception as e:
+        app.logger.error("Erro ao processar dados de /prices: %s", e)
+        prices = {'error': f'Erro ao processar dados: {e}'}
+    
+    # Se tudo falhar, tentar inicializar o banco e treinar o modelo via API
+    if pred.get('error') and hist.get('error') and prices.get('error'):
+        try:
+            app.logger.warning("Tentando inicializar o backend via /api/refresh...")
+            r_refresh = requests.post(f"{API_URL}/refresh?force=true", timeout=30)
+            r_refresh.raise_for_status()
+            app.logger.info("Backend inicializado com sucesso: %s", r_refresh.json())
+        except Exception as e:
+            app.logger.error("Falha ao inicializar backend: %s", e)
     
     return render_template("index.html", pred=pred, hist=hist, prices=prices)
 
