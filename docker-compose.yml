@@ -11,7 +11,7 @@ services:
       - dokploy-network
     labels:
       - traefik.enable=true
-      - traefik.http.routers.backend.rule=Host(`bitcoinguru.ml.caiosaldanha.com`) && PathPrefix(`/api`)
+      - traefik.http.routers.backend.rule=Host(`bitcoinguru.ml.caiosaldanha.com`) && (PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/openapi.json`) || PathPrefix(`/redoc`))
       - traefik.http.routers.backend.entrypoints=websecure
       - traefik.http.routers.backend.tls.certResolver=letsencrypt
       - traefik.http.services.backend.loadbalancer.server.port=8000
