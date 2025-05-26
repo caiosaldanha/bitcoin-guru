@@ -17,17 +17,23 @@ def convert_to_col_dict(data):
         values = data['data']
         app.logger.info("[DEBUG] convert_to_col_dict columns: %s", columns)
         app.logger.info("[DEBUG] convert_to_col_dict values: %s", values)
-        if not values or not columns:
+        if not columns:
+            app.logger.error("[DEBUG] columns vazio!")
+            return {}
+        if not values:
+            app.logger.warning("[DEBUG] values vazio!")
             return {col: [] for col in columns}
-        # DEBUG extra para ver o tipo de values e values[0]
-        app.logger.info("[DEBUG] type(values): %s", type(values))
-        app.logger.info("[DEBUG] type(values[0]): %s", type(values[0]) if values else None)
-        app.logger.info("[DEBUG] values[0]: %s", values[0] if values else None)
-        # Força sempre lista de listas
         try:
-            transposed = list(zip(*values))
+            # Garante que values é lista de listas
+            if isinstance(values[0], list):
+                transposed = list(zip(*values))
+            else:
+                # Caso values seja uma lista simples (uma linha só, não aninhada)
+                transposed = [[v] for v in values]
             app.logger.info("[DEBUG] transposed: %s", transposed)
-            return {col: list(transposed[i]) for i, col in enumerate(columns)}
+            result = {col: list(transposed[i]) for i, col in enumerate(columns)}
+            app.logger.info("[DEBUG] convert_to_col_dict result: %s", result)
+            return result
         except Exception as e:
             app.logger.error("[DEBUG] Exception in transpose: %s", e)
             return {col: [] for col in columns}
@@ -37,7 +43,9 @@ def convert_to_col_dict(data):
         for row in data:
             for k, v in row.items():
                 out[k].append(v)
+        app.logger.info("[DEBUG] convert_to_col_dict orient=records result: %s", out)
         return out
+    app.logger.warning("[DEBUG] convert_to_col_dict: formato não reconhecido, retornando {}. Data: %s", data)
     return {}
 
 @app.route("/")
