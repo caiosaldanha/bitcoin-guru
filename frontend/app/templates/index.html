@@ -8,9 +8,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+        }
         .recommendation-card {
             border-left: 5px solid;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            margin-top: 20px;
         }
         .buy {
             border-left-color: #28a745;
@@ -31,6 +40,11 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             background: linear-gradient(135deg, #6c757d 0%, #343a40 100%);
             color: white;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        .price-card:hover {
+            transform: translateY(-5px);
         }
         .price-value {
             font-size: 2.5rem;
@@ -49,6 +63,13 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            background: #007bff;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .refresh-btn:hover {
+            transform: rotate(180deg);
+            background: #0056b3;
         }
         .metrics-badge {
             margin-right: 8px;
@@ -58,10 +79,30 @@
         .header-title {
             font-weight: 700;
             color: #343a40;
+            margin-top: 20px;
         }
         .chart-container {
-            height: 300px;
+            height: 350px;
             margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        .chart-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .action-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .prediction-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
         }
     </style>
 </head>
@@ -77,6 +118,7 @@
         </div>
     </div>
 
+    <div class="prediction-container">
     {% if pred.get('error') %}
         <div class="alert alert-danger">{{ pred['error'] }}</div>
     {% elif pred.get('data') and pred['data'].get('date') %}
@@ -87,15 +129,15 @@
         {% set card_class = "buy" if recommendation == "COMPRAR" else ("sell" if recommendation == "VENDER" else "hold") %}
         {% set icon_class = "fa-arrow-trend-up" if recommendation == "COMPRAR" else ("fa-arrow-trend-down" if recommendation == "VENDER" else "fa-grip-lines") %}
         
-        <div class="row mb-4">
-            <div class="col-md-8">
+        <div class="row">
+            <div class="col-12">
                 <div class="card recommendation-card {{ card_class }}">
                     <div class="card-body">
-                        <h2 class="card-title">
+                        <h2 class="card-title mb-3">
                             <i class="fas {{ icon_class }} me-2"></i>
                             Recomendação: <strong>{{ recommendation }}</strong>
                         </h2>
-                        <p class="card-text lead">
+                        <p class="card-text lead mb-4">
                             {% if recommendation == "COMPRAR" %}
                                 Nossos modelos indicam uma alta de <strong class="text-success">{{ percent_change }}%</strong> nos próximos 7 dias.
                                 É um bom momento para investir em Bitcoin!
@@ -107,33 +149,37 @@
                                 Mantenha seus investimentos e monitore o mercado.
                             {% endif %}
                         </p>
-                        <div class="mt-3">
-                            <span class="badge bg-secondary metrics-badge" title="Erro Médio Absoluto (treino)">
-                                <i class="fas fa-chart-line me-1"></i> MAE: ${{ pred['data']['mae_train'][0]|round(2) }}
-                            </span>
-                            <span class="badge bg-secondary metrics-badge" title="Coeficiente de Determinação (treino)">
-                                <i class="fas fa-square-root-variable me-1"></i> R²: {{ pred['data']['r2_train'][0]|round(2) }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="row">
-                    <div class="col-12 mb-3">
-                        <div class="price-card">
-                            <h6>Preço Atual</h6>
-                            <div class="price-value">${{ current_price|round(2)|int }}</div>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="price-card">
-                            <h6>Previsão (7 dias)</h6>
-                            <div class="price-value">${{ future_price|round(2)|int }}</div>
-                            <span class="badge {{ 'bg-success' if percent_change > 0 else ('bg-danger' if percent_change < 0 else 'bg-warning') }}">
-                                <i class="fas {{ 'fa-arrow-up' if percent_change > 0 else ('fa-arrow-down' if percent_change < 0 else 'fa-equals') }}"></i>
-                                {{ percent_change }}%
-                            </span>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-4 mb-3">
+                                <div class="price-card">
+                                    <h6>Preço Atual</h6>
+                                    <div class="price-value">${{ current_price|round(2)|int|format_number }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="price-card">
+                                    <h6>Previsão (7 dias)</h6>
+                                    <div class="price-value">${{ future_price|round(2)|int|format_number }}</div>
+                                    <span class="badge {{ 'bg-success' if percent_change > 0 else ('bg-danger' if percent_change < 0 else 'bg-warning') }}">
+                                        <i class="fas {{ 'fa-arrow-up' if percent_change > 0 else ('fa-arrow-down' if percent_change < 0 else 'fa-equals') }}"></i>
+                                        {{ percent_change }}%
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="price-card">
+                                    <h6>Confiabilidade do Modelo</h6>
+                                    <div class="mt-2">
+                                        <span class="badge bg-light text-dark metrics-badge" title="Erro Médio Absoluto (treino)">
+                                            <i class="fas fa-chart-line me-1"></i> MAE: ${{ pred['data']['mae_train'][0]|round(2) }}
+                                        </span>
+                                        <span class="badge bg-light text-dark metrics-badge" title="Coeficiente de Determinação (treino)">
+                                            <i class="fas fa-square-root-variable me-1"></i> R²: {{ pred['data']['r2_train'][0]|round(2) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -142,39 +188,36 @@
     {% else %}
         <div class="alert alert-warning">Sem dados de previsão disponíveis.</div>
     {% endif %}
-
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title"><i class="fas fa-chart-line me-2"></i>Cotações dos Últimos 30 Dias</h5>
-            {% if prices.get('error') %}
-                <div class="alert alert-danger">{{ prices['error'] }}</div>
-            {% elif prices.get('data') and prices['data'].get('date') %}
-                <div class="chart-container">
-                    <canvas id="pricesChart"></canvas>
-                </div>
-            {% else %}
-                <div class="alert alert-warning">Dados de cotações não disponíveis.</div>
-            {% endif %}
-        </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title"><i class="fas fa-history me-2"></i>Histórico de Previsões</h5>
-            {% if hist.get('error') %}
-                <div class="alert alert-danger">{{ hist['error'] }}</div>
-            {% elif hist.get('data') and hist['data'].get('date') %}
-                <div class="chart-container">
-                    <canvas id="historyChart"></canvas>
-                </div>
-            {% else %}
-                <div class="alert alert-warning">Sem histórico de previsões disponível.</div>
-            {% endif %}
-        </div>
+    <div class="chart-card">
+        <h4 class="mb-4"><i class="fas fa-chart-line me-2 text-primary"></i>Cotações dos Últimos 30 Dias</h4>
+        {% if prices.get('error') %}
+            <div class="alert alert-danger">{{ prices['error'] }}</div>
+        {% elif prices.get('data') and prices['data'].get('date') %}
+            <div class="chart-container">
+                <canvas id="pricesChart"></canvas>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">Dados de cotações não disponíveis.</div>
+        {% endif %}
+    </div>
+
+    <div class="chart-card">
+        <h4 class="mb-4"><i class="fas fa-history me-2 text-primary"></i>Histórico de Previsões</h4>
+        {% if hist.get('error') %}
+            <div class="alert alert-danger">{{ hist['error'] }}</div>
+        {% elif hist.get('data') and hist['data'].get('date') %}
+            <div class="chart-container">
+                <canvas id="historyChart"></canvas>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">Sem histórico de previsões disponível.</div>
+        {% endif %}
     </div>
 </div>
 
-<a href="/" class="btn btn-primary refresh-btn" title="Atualizar previsão">
+<a href="/" class="btn refresh-btn" title="Atualizar previsão">
     <i class="fas fa-sync-alt"></i>
 </a>
 
@@ -245,6 +288,7 @@
             },
             scales: {
                 y: { 
+                    beginAtZero: false,
                     ticks: { callback: function(value) { return '$' + value.toLocaleString(); } }
                 }
             }

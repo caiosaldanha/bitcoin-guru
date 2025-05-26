@@ -41,6 +41,37 @@ def init_db():
 
 init_db()
 
+# --- Bootstrap ---
+def bootstrap_app():
+    """Garante que o banco tenha dados e que o modelo esteja treinado na inicialização."""
+    try:
+        # Verifica se o banco tem dados
+        with engine.begin() as conn:
+            cnt = conn.execute(text('SELECT COUNT(*) FROM btc_data')).scalar()
+        
+        if cnt == 0:
+            # Se o banco estiver vazio, busca dados históricos
+            print("Banco vazio. Iniciando bootstrap com dados históricos...")
+            fetch_and_insert(force=True)
+        else:
+            # Se já tem dados no banco, verifica se o modelo existe
+            if not os.path.exists(MODEL_PATH):
+                print("Modelo não encontrado. Retreinando...")
+                retrain_model()
+                print("Modelo treinado e salvo em", MODEL_PATH)
+            else:
+                print("Modelo encontrado em", MODEL_PATH)
+        
+        print(f"Bootstrap concluído. Banco tem {cnt} registros.")
+        return True
+    except Exception as e:
+        print(f"Erro no bootstrap: {e}")
+        traceback.print_exc()
+        return False
+
+# Executa bootstrap na inicialização
+bootstrap_app()
+
 # --- Feature Engineering ---
 def make_features(df):
     for lag in range(1, 8):

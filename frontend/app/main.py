@@ -2,10 +2,22 @@ from flask import Flask, render_template, jsonify, request
 import requests
 import pandas as pd
 import os
+import locale
 
 API_URL = os.environ.get("API_URL", "https://bitcoinguru.ml.caiosaldanha.com/api")
 
 app = Flask(__name__)
+
+# Configurar locale para formatação de números
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+
+# Filtro personalizado para formatar números
+@app.template_filter('format_number')
+def format_number(value):
+    try:
+        return locale.format_string("%d", int(value), grouping=True)
+    except (ValueError, TypeError):
+        return value
 
 def convert_to_col_dict(data):
     # Se já for dict de listas, retorna direto
