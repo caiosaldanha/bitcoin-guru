@@ -1,8 +1,9 @@
 from flask import Flask, render_template, jsonify, request
 import requests
 import pandas as pd
+import os
 
-API_URL = "http://backend:8000/api"
+API_URL = os.environ.get("API_URL", "https://bitcoinguru.ml.caiosaldanha.com/api")
 
 app = Flask(__name__)
 

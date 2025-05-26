@@ -27,6 +27,8 @@ services:
       - traefik.http.routers.frontend.entrypoints=websecure
       - traefik.http.routers.frontend.tls.certResolver=letsencrypt
       - traefik.http.services.frontend.loadbalancer.server.port=5000
+    environment:
+      - API_URL=https://bitcoinguru.ml.caiosaldanha.com/api
 
 networks:
   dokploy-network:
