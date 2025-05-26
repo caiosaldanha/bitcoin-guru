@@ -19,15 +19,18 @@ def convert_to_col_dict(data):
         app.logger.info("[DEBUG] convert_to_col_dict values: %s", values)
         if not values or not columns:
             return {col: [] for col in columns}
-        # DEBUG extra para ver o tipo de values[0]
-        app.logger.info("[DEBUG] type(values[0]): %s", type(values[0]))
-        app.logger.info("[DEBUG] values[0]: %s", values[0])
+        # DEBUG extra para ver o tipo de values e values[0]
+        app.logger.info("[DEBUG] type(values): %s", type(values))
+        app.logger.info("[DEBUG] type(values[0]): %s", type(values[0]) if values else None)
+        app.logger.info("[DEBUG] values[0]: %s", values[0] if values else None)
         # Força sempre lista de listas
-        if not isinstance(values[0], (list, tuple)):
-            values = [list(values)]
-        transposed = list(zip(*values))
-        app.logger.info("[DEBUG] transposed: %s", transposed)
-        return {col: list(transposed[i]) for i, col in enumerate(columns)}
+        try:
+            transposed = list(zip(*values))
+            app.logger.info("[DEBUG] transposed: %s", transposed)
+            return {col: list(transposed[i]) for i, col in enumerate(columns)}
+        except Exception as e:
+            app.logger.error("[DEBUG] Exception in transpose: %s", e)
+            return {col: [] for col in columns}
     # Se vier como lista de dicts (orient='records')
     if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
         out = {k: [] for k in data[0].keys()}
