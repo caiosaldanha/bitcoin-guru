@@ -19,7 +19,10 @@ def convert_to_col_dict(data):
         app.logger.info("[DEBUG] convert_to_col_dict values: %s", values)
         if not values or not columns:
             return {col: [] for col in columns}
-        # Corrigido: transpor a matriz para colunas
+        # Corrigido: tratar caso de apenas uma linha (zip(*values) retorna tuplas, mas se values tem 1 linha, zip(*values) ainda funciona)
+        # Mas se values não for lista de listas, forçar
+        if not isinstance(values[0], (list, tuple)):
+            values = [values]
         transposed = list(zip(*values))
         return {col: list(transposed[i]) for i, col in enumerate(columns)}
     # Se vier como lista de dicts (orient='records')
