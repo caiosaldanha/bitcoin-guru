@@ -92,14 +92,12 @@ def retrain_model():
     joblib.dump({'model': model, 'features': FEATURES}, MODEL_PATH)
 
 # --- Scheduler ---
+
 def scheduled_job():
     try:
         fetch_and_insert()
     except Exception as e:
         print('Scheduled job failed:', e)
-
-scheduler.add_job(scheduled_job, 'cron', hour=0, minute=15)
-scheduler.start()
 
 # --- API Endpoints ---
 @router.post('/refresh')
@@ -157,3 +155,7 @@ def api_history(limit: int = Query(10)):
     return JSONResponse(content=df.to_dict(orient='split'))
 
 app.include_router(router)
+
+# --- Scheduler Start ---
+scheduler.add_job(scheduled_job, 'cron', hour=0, minute=15)
+scheduler.start()
