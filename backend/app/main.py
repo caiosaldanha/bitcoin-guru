@@ -74,9 +74,12 @@ def fetch_and_insert(force=False):
             for _, row in df_clean.iterrows():
                 params = row.to_dict()
                 params['date'] = row['date'].strftime('%Y-%m-%d')
-                conn.execute(text(
-                    'INSERT OR REPLACE INTO btc_data (date, price, lag_1, lag_2, lag_3, lag_4, lag_5, lag_6, lag_7, ma_7, ma_14, ret_1d, ret_7d, dow) VALUES (:date, :price, :lag_1, :lag_2, :lag_3, :lag_4, :lag_5, :lag_6, :lag_7, :ma_7, :ma_14, :ret_1d, :ret_7d, :dow)'
-                ), params)
+                # só insere se não existe
+                exists = conn.execute(text('SELECT 1 FROM btc_data WHERE date=:date'), {'date': params['date']}).fetchone()
+                if not exists:
+                    conn.execute(text(
+                        'INSERT INTO btc_data (date, price, lag_1, lag_2, lag_3, lag_4, lag_5, lag_6, lag_7, ma_7, ma_14, ret_1d, ret_7d, dow) VALUES (:date, :price, :lag_1, :lag_2, :lag_3, :lag_4, :lag_5, :lag_6, :lag_7, :ma_7, :ma_14, :ret_1d, :ret_7d, :dow)'
+                    ), params)
         retrain_model()
         return True
     # incremental insert (existing logic)
