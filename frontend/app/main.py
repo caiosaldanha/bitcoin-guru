@@ -19,8 +19,9 @@ def convert_to_col_dict(data):
         app.logger.info("[DEBUG] convert_to_col_dict values: %s", values)
         if not values or not columns:
             return {col: [] for col in columns}
-        # Garante que values é lista de listas
-        return {col: [row[i] for row in values] for i, col in enumerate(columns)}
+        # Corrigido: transpor a matriz para colunas
+        transposed = list(zip(*values))
+        return {col: list(transposed[i]) for i, col in enumerate(columns)}
     # Se vier como lista de dicts (orient='records')
     if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
         out = {k: [] for k in data[0].keys()}
