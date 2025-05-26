@@ -161,24 +161,45 @@ def fetch_and_insert(force=False):
 # --- Model Training ---
 def retrain_model():
     try:
+        # Buscar todos os dados
         with engine.begin() as conn:
             df = pd.read_sql('SELECT * FROM btc_data ORDER BY date', conn)
+        
+        df['date'] = pd.to_datetime(df['date'])
         df = df.dropna()
+        
         # skip retraining if no valid data rows
         if df.empty:
             print("Não há dados suficientes para treinar o modelo")
             return False
-            
+        
+        # Criar o target (preço 7 dias depois) como no notebook original
+        horizon = 7
+        df_target = df.copy()
+        df_target['target'] = df_target['price'].shift(-horizon)  # Preço 7 dias no futuro
+        
+        # Remover linhas sem target (últimos 7 dias)
+        df_target = df_target.dropna()
+        
+        if df_target.empty:
+            print("Não há dados suficientes para treinar o modelo após criar o target")
+            return False
+        
+        # Mesmas features do notebook
         FEATURES = [f'lag_{i}' for i in range(1,8)] + ['ma_7','ma_14','ret_1d','ret_7d','dow']
-        X = df[FEATURES].values
-        y = df['price'].values
+        
+        # X e y de acordo com o notebook
+        X = df_target[FEATURES].values
+        y = df_target['target'].values  # Target é preço futuro (7 dias), não o preço atual
+        
+        # Mesmo pipeline do notebook
         model = make_pipeline(StandardScaler(), Ridge(alpha=1.0))
         model.fit(X, y)
         
         # Garantir que o diretório existe
         os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
         
-        # Salvar o modelo
+        # Salvar o modelo e informações para predição
         joblib.dump({'model': model, 'features': FEATURES}, MODEL_PATH)
         print(f"Modelo treinado e salvo com sucesso em: {MODEL_PATH}")
         return True
@@ -244,15 +265,27 @@ def api_predict():
             # E tentar carregar novamente
             model_obj = joblib.load(MODEL_PATH)
             model, FEATURES = model_obj['model'], model_obj['features']
-            
+        
+        # Usar os dados atuais para prever o preço em 7 dias
         X = row[FEATURES].values.reshape(1, -1)
         pred_7d = float(model.predict(X)[0])
         
-        # Metrics
+        # Calcular métricas usando dados históricos (com target correto)
         with engine.begin() as conn:
-            df_train = pd.read_sql('SELECT * FROM btc_data ORDER BY date', conn).dropna()
-        X_train = df_train[FEATURES].values
-        y_train = df_train['price'].values
+            df_train = pd.read_sql('SELECT * FROM btc_data ORDER BY date', conn)
+        
+        df_train['date'] = pd.to_datetime(df_train['date'])
+        df_train = df_train.dropna()
+        
+        # Criar o target para validação (como no treinamento)
+        horizon = 7
+        df_target = df_train.copy()
+        df_target['target'] = df_target['price'].shift(-horizon)
+        df_target = df_target.dropna()  # Remove linhas sem target
+        
+        # X_train e y_train corretos para validação
+        X_train = df_target[FEATURES].values
+        y_train = df_target['target'].values  # Target é o preço 7 dias no futuro
         y_pred = model.predict(X_train)
         
         # Importar aqui para evitar problemas de dependência
