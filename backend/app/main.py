@@ -326,50 +326,35 @@ def api_history(limit: int = Query(10), window_days: int = Query(30)):
         JSONResponse com os dados das previsões mais recentes para datas diferentes
     """
     try:
-        with engine.begin() as conn:
-            # Pega as datas únicas mais recentes
-            unique_dates_query = """
-            SELECT DISTINCT date 
-            FROM predictions 
-            ORDER BY date DESC 
-            LIMIT ?
+        with engine.begin() as conn:            # Vamos simplificar a abordagem para evitar problemas com parâmetros
+            # Em vez de buscar datas únicas primeiro, podemos fazer uma consulta mais direta
+            query = """
+            SELECT p.id, p.run_ts, p.date, p.pred_7d 
+            FROM predictions p
+            JOIN (
+                SELECT date, MAX(run_ts) as max_ts 
+                FROM predictions 
+                GROUP BY date
+                ORDER BY date DESC
+                LIMIT ?
+            ) latest
+            ON p.date = latest.date AND p.run_ts = latest.max_ts
+            ORDER BY p.date DESC
             """
             
-            unique_dates_df = pd.read_sql(unique_dates_query, conn, params=[window_days])
+            # Passamos um parâmetro único como tupla ou dicionário conforme exigido pelo SQLAlchemy
+            df = pd.read_sql(query, conn, params=(window_days,))
             
-            if len(unique_dates_df) == 0:
+            if len(df) == 0:
                 print("Nenhuma data encontrada nas previsões")
                 return JSONResponse(content={"columns": [], "data": []})
+                  # Limitamos os resultados após a consulta
+            df = df.head(limit)
             
-            # Pega a previsão mais recente para cada data única
-            if len(unique_dates_df) > 0:
-                dates_list = unique_dates_df['date'].tolist()
-                placeholders = ", ".join(["?" for _ in dates_list])
-                
-                query = f"""
-                SELECT p.id, p.run_ts, p.date, p.pred_7d 
-                FROM predictions p
-                JOIN (
-                    SELECT date, MAX(run_ts) as max_ts 
-                    FROM predictions 
-                    WHERE date IN ({placeholders})
-                    GROUP BY date
-                ) latest
-                ON p.date = latest.date AND p.run_ts = latest.max_ts
-                ORDER BY p.date DESC
-                LIMIT ?
-                """
-                
-                params = dates_list + [limit]
-                df = pd.read_sql(query, conn, params=params)
-                
-                # Se não temos dados suficientes, pegamos as previsões mais recentes
-                if len(df) < limit and len(df) < len(dates_list):
-                    print(f"Poucas previsões únicas ({len(df)}), buscando mais")
-                    df = pd.read_sql("SELECT * FROM predictions ORDER BY run_ts DESC LIMIT ?", conn, params=[limit])
-            else:
-                # Se não há previsões, retorna um dataset vazio
-                df = pd.DataFrame(columns=['id', 'run_ts', 'date', 'pred_7d'])
+            # Se não temos dados suficientes, pegamos as previsões mais recentes
+            if len(df) < limit:
+                print(f"Poucas previsões únicas ({len(df)}), buscando mais")
+                df = pd.read_sql("SELECT * FROM predictions ORDER BY run_ts DESC LIMIT ?", conn, params=(limit,))
             
             print(f"Histórico retornado: {len(df)} previsões para {len(df['date'].unique())} datas únicas")
             
