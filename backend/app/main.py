@@ -201,6 +201,19 @@ def dump_db():
         df = pd.read_sql('SELECT * FROM btc_data ORDER BY date', conn)
     return JSONResponse(content=df.to_dict(orient='records'))
 
+@router.post('/resetdb')
+def reset_db():
+    """Deleta o arquivo do banco SQLite e reinicializa o banco com bootstrap de 365 dias."""
+    import shutil
+    try:
+        if os.path.exists(DB_PATH):
+            os.remove(DB_PATH)
+        init_db()
+        fetch_and_insert(force=True)
+        return {"detail": "Banco resetado e recarregado com histórico."}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
 app.include_router(router)
 
 # --- Scheduler Start ---
