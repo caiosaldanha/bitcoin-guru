@@ -11,10 +11,15 @@ app = Flask(__name__)
 @app.template_filter('format_number')
 def format_number(value):
     try:
-        # Converte para inteiro
-        num = int(value)
-        # Formata com separador de milhar
-        return "{:,}".format(num).replace(",", ".")
+        # Tenta converter para float primeiro (mais flexível)
+        num = float(value)
+        # Verifica se é um valor inteiro (sem decimais)
+        if num.is_integer():
+            # Formata sem casas decimais
+            return "{:,.0f}".format(num).replace(",", ".")
+        else:
+            # Formata com 2 casas decimais para valores com parte decimal
+            return "{:,.2f}".format(num).replace(",", ".")
     except (ValueError, TypeError):
         return value
 

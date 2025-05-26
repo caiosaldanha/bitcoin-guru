@@ -314,10 +314,74 @@ def api_predict():
     return JSONResponse(content=out.to_dict(orient='split'))
 
 @router.get('/history')
-def api_history(limit: int = Query(10)):
-    with engine.begin() as conn:
-        df = pd.read_sql(f'SELECT * FROM predictions ORDER BY run_ts DESC LIMIT {limit}', conn)
-    return JSONResponse(content=df.to_dict(orient='split'))
+def api_history(limit: int = Query(10), window_days: int = Query(30)):
+    """
+    Retorna o histórico de previsões, selecionando apenas a previsão mais recente para cada data única.
+    
+    Args:
+        limit: Número máximo de previsões para retornar
+        window_days: Janela de dias distintos que queremos obter (busca os últimos X dias)
+    
+    Returns:
+        JSONResponse com os dados das previsões mais recentes para datas diferentes
+    """
+    try:
+        with engine.begin() as conn:
+            # Pega as datas únicas mais recentes
+            unique_dates_query = """
+            SELECT DISTINCT date 
+            FROM predictions 
+            ORDER BY date DESC 
+            LIMIT ?
+            """
+            
+            unique_dates_df = pd.read_sql(unique_dates_query, conn, params=[window_days])
+            
+            if len(unique_dates_df) == 0:
+                print("Nenhuma data encontrada nas previsões")
+                return JSONResponse(content={"columns": [], "data": []})
+            
+            # Pega a previsão mais recente para cada data única
+            if len(unique_dates_df) > 0:
+                dates_list = unique_dates_df['date'].tolist()
+                placeholders = ", ".join(["?" for _ in dates_list])
+                
+                query = f"""
+                SELECT p.id, p.run_ts, p.date, p.pred_7d 
+                FROM predictions p
+                JOIN (
+                    SELECT date, MAX(run_ts) as max_ts 
+                    FROM predictions 
+                    WHERE date IN ({placeholders})
+                    GROUP BY date
+                ) latest
+                ON p.date = latest.date AND p.run_ts = latest.max_ts
+                ORDER BY p.date DESC
+                LIMIT ?
+                """
+                
+                params = dates_list + [limit]
+                df = pd.read_sql(query, conn, params=params)
+                
+                # Se não temos dados suficientes, pegamos as previsões mais recentes
+                if len(df) < limit and len(df) < len(dates_list):
+                    print(f"Poucas previsões únicas ({len(df)}), buscando mais")
+                    df = pd.read_sql("SELECT * FROM predictions ORDER BY run_ts DESC LIMIT ?", conn, params=[limit])
+            else:
+                # Se não há previsões, retorna um dataset vazio
+                df = pd.DataFrame(columns=['id', 'run_ts', 'date', 'pred_7d'])
+            
+            print(f"Histórico retornado: {len(df)} previsões para {len(df['date'].unique())} datas únicas")
+            
+            # Certifique-se de que as datas estão formatadas corretamente para display
+            if 'date' in df.columns:
+                df['date_display'] = df['date']  # Mantém a data original para display
+            
+            return JSONResponse(content=df.to_dict(orient='split'))
+    except Exception as e:
+        print(f"Erro ao buscar histórico: {e}")
+        traceback.print_exc()
+        raise HTTPException(500, f"Erro ao buscar histórico: {str(e)}")
 
 @router.get('/prices')
 def api_prices(days: int = Query(30)):
