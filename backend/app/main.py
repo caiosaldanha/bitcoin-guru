@@ -191,6 +191,13 @@ def api_history(limit: int = Query(10)):
         df = pd.read_sql(f'SELECT * FROM predictions ORDER BY run_ts DESC LIMIT {limit}', conn)
     return JSONResponse(content=df.to_dict(orient='split'))
 
+@router.get('/dbdump')
+def dump_db():
+    """Retorna todos os dados da tabela btc_data para debug/checagem."""
+    with engine.begin() as conn:
+        df = pd.read_sql('SELECT * FROM btc_data ORDER BY date', conn)
+    return JSONResponse(content=df.to_dict(orient='records'))
+
 app.include_router(router)
 
 # --- Scheduler Start ---
