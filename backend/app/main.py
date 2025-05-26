@@ -86,6 +86,9 @@ def retrain_model():
     with engine.begin() as conn:
         df = pd.read_sql('SELECT * FROM btc_data ORDER BY date', conn)
     df = df.dropna()
+    # skip retraining if no valid data rows
+    if df.empty:
+        return
     FEATURES = [f'lag_{i}' for i in range(1,8)] + ['ma_7','ma_14','ret_1d','ret_7d','dow']
     X = df[FEATURES].values
     y = df['price'].values
