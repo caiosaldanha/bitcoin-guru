@@ -31,16 +31,20 @@ def index():
         r = requests.get(f"{API_URL}/predict", timeout=10)
         r.raise_for_status()
         pred = r.json()
+        print("[DEBUG] /predict raw:", pred)
         if 'data' in pred:
             pred['data'] = convert_to_col_dict(pred['data'])
+            print("[DEBUG] /predict converted:", pred['data'])
     except Exception as e:
         pred = {'error': f'Erro ao acessar API /predict: {e}'}
     try:
         r_hist = requests.get(f"{API_URL}/history?limit=10", timeout=10)
         r_hist.raise_for_status()
         hist = r_hist.json()
+        print("[DEBUG] /history raw:", hist)
         if 'data' in hist:
             hist['data'] = convert_to_col_dict(hist['data'])
+            print("[DEBUG] /history converted:", hist['data'])
     except Exception as e:
         hist = {'error': f'Erro ao acessar API /history: {e}'}
     return render_template("index.html", pred=pred, hist=hist)
