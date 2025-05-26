@@ -6,7 +6,7 @@ services:
     build: ./backend
     container_name: backend
     volumes:
-      - db_data:/data/db.sqlite
+      - db_data:/data
     networks:
       - dokploy-network
     labels:
