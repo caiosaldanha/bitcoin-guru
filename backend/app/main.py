@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, APIRouter
 from fastapi.responses import JSONResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import create_engine, text
@@ -15,6 +15,7 @@ from sklearn.linear_model import Ridge
 DB_PATH = '/data/db.sqlite'
 MODEL_PATH = 'models/btc_linreg.pkl'
 
+router = APIRouter(prefix="/api")
 app = FastAPI()
 scheduler = BackgroundScheduler()
 engine = create_engine(f'sqlite:///{DB_PATH}', connect_args={"check_same_thread": False})
@@ -100,14 +101,14 @@ scheduler.add_job(scheduled_job, 'cron', hour=0, minute=15)
 scheduler.start()
 
 # --- API Endpoints ---
-@app.post('/api/refresh')
+@router.post('/refresh')
 def api_refresh(force: bool = Query(False)):
     changed = fetch_and_insert(force=force)
     if not changed:
         return JSONResponse(status_code=204, content={'detail': 'Already up to date'})
     return {'detail': 'Data refreshed and model retrained'}
 
-@app.get('/api/predict')
+@router.get('/predict')
 def api_predict():
     with engine.begin() as conn:
         df = pd.read_sql('SELECT * FROM btc_data ORDER BY date DESC LIMIT 30', conn).sort_values('date')
@@ -143,8 +144,10 @@ def api_predict():
     })
     return JSONResponse(content=out.to_dict(orient='split'))
 
-@app.get('/api/history')
+@router.get('/history')
 def api_history(limit: int = Query(10)):
     with engine.begin() as conn:
         df = pd.read_sql(f'SELECT * FROM predictions ORDER BY run_ts DESC LIMIT {limit}', conn)
     return JSONResponse(content=df.to_dict(orient='split'))
+
+app.include_router(router)

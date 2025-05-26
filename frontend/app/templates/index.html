@@ -12,42 +12,52 @@
     <div class="card mb-4">
         <div class="card-body">
             <h5 class="card-title">Última Previsão</h5>
-            <ul>
-                <li><b>Data:</b> {{ pred['data']['date'][0] }}</li>
-                <li><b>Preço Atual:</b> ${{ pred['data']['price_now'][0]|round(2) }}</li>
-                <li><b>Previsão 7 dias:</b> ${{ pred['data']['pred_7d'][0]|round(2) }}</li>
-                <li><b>MAE (treino):</b> ${{ pred['data']['mae_train'][0]|round(2) }}</li>
-                <li><b>R² (treino):</b> {{ pred['data']['r2_train'][0]|round(2) }}</li>
-            </ul>
+            {% if pred.get('error') %}
+                <div class="alert alert-danger">{{ pred['error'] }}</div>
+            {% else %}
+                <ul>
+                    <li><b>Data:</b> {{ pred['data']['date'][0] }}</li>
+                    <li><b>Preço Atual:</b> ${{ pred['data']['price_now'][0]|round(2) }}</li>
+                    <li><b>Previsão 7 dias:</b> ${{ pred['data']['pred_7d'][0]|round(2) }}</li>
+                    <li><b>MAE (treino):</b> ${{ pred['data']['mae_train'][0]|round(2) }}</li>
+                    <li><b>R² (treino):</b> {{ pred['data']['r2_train'][0]|round(2) }}</li>
+                </ul>
+            {% endif %}
         </div>
     </div>
     <div class="card mb-4">
         <div class="card-body">
             <h5 class="card-title">Histórico de Previsões</h5>
-            <canvas id="historyChart"></canvas>
+            {% if hist.get('error') %}
+                <div class="alert alert-danger">{{ hist['error'] }}</div>
+            {% else %}
+                <canvas id="historyChart"></canvas>
+            {% endif %}
         </div>
     </div>
 </div>
-<script>
-    const hist = {{ hist|tojson }};
-    const labels = hist.data.date;
-    const data = hist.data.pred_7d;
-    new Chart(document.getElementById('historyChart'), {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Previsão 7 dias',
-                data: data,
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } }
-        }
-    });
-</script>
+{% if not hist.get('error') %}
+    <script type="text/javascript">
+        var hist = {{ hist|tojson|safe }};
+        var labels = hist.data.date;
+        var data = hist.data.pred_7d;
+        new Chart(document.getElementById('historyChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Previsão 7 dias',
+                    data: data,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+    </script>
+{% endif %}
 </body>
 </html>
