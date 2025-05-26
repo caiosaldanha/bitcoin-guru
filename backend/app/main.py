@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
+import traceback
 
 DB_PATH = '/data/db.sqlite'
 MODEL_PATH = 'models/btc_linreg.pkl'
@@ -103,10 +104,15 @@ scheduler.start()
 # --- API Endpoints ---
 @router.post('/refresh')
 def api_refresh(force: bool = Query(False)):
-    changed = fetch_and_insert(force=force)
-    if not changed:
-        return JSONResponse(status_code=204, content={'detail': 'Already up to date'})
-    return {'detail': 'Data refreshed and model retrained'}
+    try:
+        changed = fetch_and_insert(force=force)
+        if not changed:
+            return JSONResponse(status_code=204, content={'detail': 'Already up to date'})
+        return {'detail': 'Data refreshed and model retrained'}
+    except Exception as e:
+        tb = traceback.format_exc()
+        print('API /refresh failed:', e, tb)
+        return JSONResponse(status_code=500, content={'detail': str(e), 'traceback': tb})
 
 @router.get('/predict')
 def api_predict():
