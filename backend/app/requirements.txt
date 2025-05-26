@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+scikit-learn
+apscheduler
+requests
+joblib
+sqlalchemy

@@ -1,0 +1,37 @@
+# Docker Compose para orquestração dos serviços backend, frontend e Traefik
+version: '3.9'
+
+services:
+  backend:
+    build: ./backend
+    container_name: backend
+    volumes:
+      - db_data:/data/db.sqlite
+    networks:
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend.rule=Host(`bitcoinguru.ml.caiosaldanha.com`) && PathPrefix(`/api`)
+      - traefik.http.routers.backend.entrypoints=websecure
+      - traefik.http.routers.backend.tls.certResolver=letsencrypt
+      - traefik.http.services.backend.loadbalancer.server.port=8000
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    networks:
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.frontend.rule=Host(`bitcoinguru.ml.caiosaldanha.com`)
+      - traefik.http.routers.frontend.entrypoints=websecure
+      - traefik.http.routers.frontend.tls.certResolver=letsencrypt
+      - traefik.http.services.frontend.loadbalancer.server.port=5000
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  db_data:
+    driver: local
