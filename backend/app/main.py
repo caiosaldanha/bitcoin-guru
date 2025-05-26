@@ -16,7 +16,7 @@ import traceback
 DB_PATH = '/data/db.sqlite'
 MODEL_PATH = 'models/btc_linreg.pkl'
 
-app = FastAPI()
+app = FastAPI(docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url="/api/redoc")
 router = APIRouter(prefix="/api")
 scheduler = BackgroundScheduler()
 engine = create_engine(f'sqlite:///{DB_PATH}', connect_args={"check_same_thread": False})
