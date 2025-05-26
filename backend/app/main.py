@@ -13,11 +13,14 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
 import traceback
 
+# Use caminhos absolutos para garantir que funcionem no container
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = '/data/db.sqlite'
-MODEL_PATH = 'models/btc_linreg.pkl'
+MODEL_PATH = os.path.join(BASE_DIR, 'models', 'btc_linreg.pkl')
 
 # Garantir que a pasta models exista
 os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+print(f"Diretório do modelo: {os.path.dirname(MODEL_PATH)}")
 
 app = FastAPI(docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url="/api/redoc")
 router = APIRouter(prefix="/api")
@@ -42,48 +45,22 @@ def init_db():
             pred_7d REAL
         )'''))
 
-# --- BOOTSTRAP ---
-def bootstrap_app():
-    """Inicializa o banco de dados e garante que o modelo esteja treinado."""
-    print("Iniciando bootstrap da aplicação...")
-    
-    # Inicializa o banco de dados
-    init_db()
-    
-    try:
-        # Verifica se existem dados no banco
-        with engine.begin() as conn:
-            count = conn.execute(text('SELECT COUNT(*) FROM btc_data')).scalar()
-        
-        print(f"Banco de dados tem {count} registros")
-        
-        # Se o banco estiver vazio, busca dados históricos
-        if count == 0:
-            print("Buscando dados históricos iniciais...")
-            fetch_and_insert(force=True)
-        
-        # Verifica se o modelo existe, caso contrário treina
-        if not os.path.exists(MODEL_PATH):
-            print("Modelo não encontrado. Treinando modelo com dados existentes...")
-            retrain_model()
-            print(f"Modelo treinado e salvo em: {MODEL_PATH}")
-    except Exception as e:
-        print(f"Erro durante bootstrap: {e}")
-        traceback.print_exc()
-
-# Executa o bootstrap na inicialização
-bootstrap_app()
+init_db()
 
 # --- Bootstrap ---
 def bootstrap_app():
     """Garante que o banco tenha dados e que o modelo esteja treinado na inicialização."""
+    print("Iniciando bootstrap da aplicação...")
+    
     try:
-        # Verifica se o banco tem dados
+        # Verifica se existem dados no banco
         with engine.begin() as conn:
             cnt = conn.execute(text('SELECT COUNT(*) FROM btc_data')).scalar()
         
+        print(f"Banco de dados tem {cnt} registros")
+        
+        # Se o banco estiver vazio, busca dados históricos
         if cnt == 0:
-            # Se o banco estiver vazio, busca dados históricos
             print("Banco vazio. Iniciando bootstrap com dados históricos...")
             fetch_and_insert(force=True)
         else:
@@ -91,10 +68,16 @@ def bootstrap_app():
             if not os.path.exists(MODEL_PATH):
                 print("Modelo não encontrado. Retreinando...")
                 retrain_model()
-                print("Modelo treinado e salvo em", MODEL_PATH)
+                print(f"Modelo treinado e salvo em: {MODEL_PATH}")
             else:
-                print("Modelo encontrado em", MODEL_PATH)
+                print(f"Modelo encontrado em: {MODEL_PATH}")
         
+        # Força o treinamento do modelo se ele não existir
+        if not os.path.exists(MODEL_PATH):
+            print("Forçando treinamento do modelo...")
+            retrain_model()
+            print(f"Modelo treinado e salvo em: {MODEL_PATH}")
+            
         print(f"Bootstrap concluído. Banco tem {cnt} registros.")
         return True
     except Exception as e:
@@ -102,7 +85,8 @@ def bootstrap_app():
         traceback.print_exc()
         return False
 
-# Executa bootstrap na inicialização
+# Executa o bootstrap logo após definir a função
+print("Chamando bootstrap_app()...")
 bootstrap_app()
 
 # --- Feature Engineering ---
@@ -176,19 +160,32 @@ def fetch_and_insert(force=False):
 
 # --- Model Training ---
 def retrain_model():
-    with engine.begin() as conn:
-        df = pd.read_sql('SELECT * FROM btc_data ORDER BY date', conn)
-    df = df.dropna()
-    # skip retraining if no valid data rows
-    if df.empty:
-        return
-    FEATURES = [f'lag_{i}' for i in range(1,8)] + ['ma_7','ma_14','ret_1d','ret_7d','dow']
-    X = df[FEATURES].values
-    y = df['price'].values
-    model = make_pipeline(StandardScaler(), Ridge(alpha=1.0))
-    model.fit(X, y)
-    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-    joblib.dump({'model': model, 'features': FEATURES}, MODEL_PATH)
+    try:
+        with engine.begin() as conn:
+            df = pd.read_sql('SELECT * FROM btc_data ORDER BY date', conn)
+        df = df.dropna()
+        # skip retraining if no valid data rows
+        if df.empty:
+            print("Não há dados suficientes para treinar o modelo")
+            return False
+            
+        FEATURES = [f'lag_{i}' for i in range(1,8)] + ['ma_7','ma_14','ret_1d','ret_7d','dow']
+        X = df[FEATURES].values
+        y = df['price'].values
+        model = make_pipeline(StandardScaler(), Ridge(alpha=1.0))
+        model.fit(X, y)
+        
+        # Garantir que o diretório existe
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+        
+        # Salvar o modelo
+        joblib.dump({'model': model, 'features': FEATURES}, MODEL_PATH)
+        print(f"Modelo treinado e salvo com sucesso em: {MODEL_PATH}")
+        return True
+    except Exception as e:
+        print(f"Erro ao treinar modelo: {e}")
+        traceback.print_exc()
+        return False
 
 # --- Scheduler ---
 
@@ -214,34 +211,65 @@ def api_refresh(force: bool = Query(False)):
 
 @router.get('/predict')
 def api_predict():
-    with engine.begin() as conn:
-        df = pd.read_sql('SELECT * FROM btc_data ORDER BY date DESC LIMIT 30', conn).sort_values('date')
-    if df.empty:
-        raise HTTPException(404, 'No data')
-    df['date'] = pd.to_datetime(df['date'])
-    # compute features and drop rows with NaNs
-    df_feat = make_features(df)
-    df_clean = df_feat.dropna()
-    if df_clean.empty:
-        raise HTTPException(404, 'Not enough data to predict')
-    row = df_clean.iloc[-1]
-    # Load model
-    model_obj = joblib.load(MODEL_PATH)
-    model, FEATURES = model_obj['model'], model_obj['features']
-    X = row[FEATURES].values.reshape(1, -1)
-    pred_7d = float(model.predict(X)[0])
-    # Metrics
-    with engine.begin() as conn:
-        df_train = pd.read_sql('SELECT * FROM btc_data ORDER BY date', conn).dropna()
-    X_train = df_train[FEATURES].values
-    y_train = df_train['price'].values
-    y_pred = model.predict(X_train)
-    from sklearn.metrics import mean_absolute_error, r2_score
-    mae = float(mean_absolute_error(y_train, y_pred))
-    r2 = float(r2_score(y_train, y_pred))
-    # Save prediction
-    with engine.begin() as conn:
-        conn.execute(text('INSERT INTO predictions (date, pred_7d) VALUES (:date, :pred_7d)'), {'date': row['date'].strftime('%Y-%m-%d'), 'pred_7d': pred_7d})
+    try:
+        # Verifica se o modelo existe
+        if not os.path.exists(MODEL_PATH):
+            print(f"Modelo não encontrado em {MODEL_PATH}. Tentando criar...")
+            retrain_model()
+
+        # Buscar dados do banco
+        with engine.begin() as conn:
+            df = pd.read_sql('SELECT * FROM btc_data ORDER BY date DESC LIMIT 30', conn).sort_values('date')
+        if df.empty:
+            raise HTTPException(404, 'No data')
+
+        df['date'] = pd.to_datetime(df['date'])
+        # compute features and drop rows with NaNs
+        df_feat = make_features(df)
+        df_clean = df_feat.dropna()
+        if df_clean.empty:
+            raise HTTPException(404, 'Not enough data to predict')
+            
+        row = df_clean.iloc[-1]
+        
+        # Load model - com tratamento de erro
+        try:
+            print(f"Tentando carregar o modelo de: {MODEL_PATH}")
+            model_obj = joblib.load(MODEL_PATH)
+            model, FEATURES = model_obj['model'], model_obj['features']
+        except Exception as e:
+            print(f"Erro ao carregar modelo: {e}")
+            # Se falhar, tentar treinar novamente
+            retrain_model()
+            # E tentar carregar novamente
+            model_obj = joblib.load(MODEL_PATH)
+            model, FEATURES = model_obj['model'], model_obj['features']
+            
+        X = row[FEATURES].values.reshape(1, -1)
+        pred_7d = float(model.predict(X)[0])
+        
+        # Metrics
+        with engine.begin() as conn:
+            df_train = pd.read_sql('SELECT * FROM btc_data ORDER BY date', conn).dropna()
+        X_train = df_train[FEATURES].values
+        y_train = df_train['price'].values
+        y_pred = model.predict(X_train)
+        
+        # Importar aqui para evitar problemas de dependência
+        from sklearn.metrics import mean_absolute_error, r2_score
+        mae = float(mean_absolute_error(y_train, y_pred))
+        r2 = float(r2_score(y_train, y_pred))
+        
+        # Save prediction
+        with engine.begin() as conn:
+            conn.execute(text('INSERT INTO predictions (date, pred_7d) VALUES (:date, :pred_7d)'), 
+                        {'date': row['date'].strftime('%Y-%m-%d'), 'pred_7d': pred_7d})
+            
+        print(f"Predição realizada com sucesso: {pred_7d}")
+    except Exception as e:
+        print(f"Erro na predição: {e}")
+        traceback.print_exc()
+        raise HTTPException(500, f"Erro ao fazer predição: {str(e)}")
     # Response
     out = pd.DataFrame({
         'date': [row['date'].strftime('%Y-%m-%d')],
