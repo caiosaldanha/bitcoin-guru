@@ -15,7 +15,6 @@ def index():
         pred = r.json()
         # Adaptar para formato esperado pelo template (data orient='split' para dict de listas)
         if 'data' in pred and isinstance(pred['data'], dict) and 'columns' in pred['data'] and 'data' in pred['data']:
-            # Converter orient='split' para dict de listas por coluna
             columns = pred['data']['columns']
             values = pred['data']['data']
             pred['data'] = {col: [row[i] for row in values] for i, col in enumerate(columns)}
