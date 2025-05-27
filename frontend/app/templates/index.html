@@ -302,28 +302,45 @@
                 futurePrice: {{ pred['pred_7d'][0] }},
                 mae: {{ pred['mae_train'][0] }},
                 r2: {{ pred['r2_train'][0] }}
-            };
-
-            // 1. Gráfico de Performance do Modelo
+            };            // 1. Gráfico de Performance do Modelo
             var performanceCtx = document.getElementById('modelPerformanceChart');
-            if (performanceCtx && techData.performance_history && techData.performance_history.length > 0) {
+            if (performanceCtx) {
+                // Verificar se temos dados de performance, caso contrário usar dados atuais
+                var performanceHistory = techData.performance_history || [];
+                
+                // Se não há dados de histórico, criar um ponto com as métricas atuais
+                if (performanceHistory.length === 0) {
+                    var today = new Date().toISOString().split('T')[0];
+                    performanceHistory = [{
+                        date: today,
+                        mae: predData.mae,
+                        r2: predData.r2
+                    }];
+                }
+                
                 new Chart(performanceCtx, {
                     type: 'line',
                     data: {
-                        labels: techData.performance_history.map(p => p.date),
+                        labels: performanceHistory.map(p => p.date),
                         datasets: [
                             {
                                 label: 'MAE (Erro Médio)',
-                                data: techData.performance_history.map(p => p.mae),
+                                data: performanceHistory.map(p => p.mae),
                                 borderColor: 'rgb(220, 53, 69)',
                                 backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1,
                                 yAxisID: 'y'
                             },
                             {
                                 label: 'R² (Precisão %)',
-                                data: techData.performance_history.map(p => p.r2 * 100),
+                                data: performanceHistory.map(p => p.r2 * 100),
                                 borderColor: 'rgb(25, 135, 84)',
                                 backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1,
                                 yAxisID: 'y1'
                             }
                         ]
@@ -336,41 +353,79 @@
                                 type: 'linear',
                                 display: true,
                                 position: 'left',
-                                title: { display: true, text: 'MAE ($)' }
+                                title: { display: true, text: 'MAE ($)' },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
                             },
                             y1: {
                                 type: 'linear',
                                 display: true,
                                 position: 'right',
                                 title: { display: true, text: 'Precisão (%)' },
-                                grid: { drawOnChartArea: false }
+                                grid: { drawOnChartArea: false },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toFixed(1) + '%';
+                                    }
+                                }
                             }
                         },
                         plugins: {
-                            legend: { display: true }
+                            legend: { 
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        var label = context.dataset.label || '';
+                                        if (label === 'MAE (Erro Médio)') {
+                                            return label + ': $' + context.parsed.y.toLocaleString();
+                                        } else if (label === 'R² (Precisão %)') {
+                                            return label + ': ' + context.parsed.y.toFixed(1) + '%';
+                                        }
+                                        return label + ': ' + context.parsed.y;
+                                    }
+                                }
+                            }
                         }
                     }
                 });
-            }
-
-            // 2. Gráfico de Volatilidade
+            }            // 2. Gráfico de Volatilidade
             var volatilityCtx = document.getElementById('volatilityChart');
-            if (volatilityCtx && techData.ret_1d) {
+            if (volatilityCtx && techData.ret_1d && techData.ret_1d.length > 0) {
                 var volatilityData = techData.ret_1d.map(ret => Math.abs(ret * 100));
-                document.getElementById('volatilityIndex').textContent = techData.volatility_7d + '%';
+                var volatilityValue = techData.volatility_7d || 0;
+                document.getElementById('volatilityIndex').textContent = volatilityValue.toFixed(2) + '%';
+                
+                // Usar pelo menos os últimos 7 dias ou todos os dados disponíveis
+                var dataLength = Math.min(15, techData.dates.length);
+                var chartLabels = techData.dates.slice(-dataLength);
+                var chartData = volatilityData.slice(-dataLength);
                 
                 new Chart(volatilityCtx, {
                     type: 'bar',
                     data: {
-                        labels: techData.dates.slice(-15), // Últimos 15 dias
+                        labels: chartLabels,
                         datasets: [{
                             label: 'Volatilidade Diária (%)',
-                            data: volatilityData.slice(-15),
+                            data: chartData,
                             backgroundColor: function(context) {
                                 var value = context.parsed.y;
                                 if (value > 5) return 'rgba(220, 53, 69, 0.8)'; // Alto risco
                                 if (value > 2) return 'rgba(255, 193, 7, 0.8)'; // Médio risco
                                 return 'rgba(25, 135, 84, 0.8)'; // Baixo risco
+                            },
+                            borderColor: function(context) {
+                                var value = context.parsed.y;
+                                if (value > 5) return 'rgb(220, 53, 69)';
+                                if (value > 2) return 'rgb(255, 193, 7)';
+                                return 'rgb(25, 135, 84)';
                             },
                             borderWidth: 1
                         }]
@@ -379,16 +434,33 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: true }
+                            legend: { display: true },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        var value = context.parsed.y;
+                                        var risk = value > 5 ? ' (Alto Risco)' : value > 2 ? ' (Médio Risco)' : ' (Baixo Risco)';
+                                        return context.dataset.label + ': ' + value.toFixed(2) + '%' + risk;
+                                    }
+                                }
+                            }
                         },
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                title: { display: true, text: 'Volatilidade (%)' }
+                                title: { display: true, text: 'Volatilidade (%)' },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toFixed(1) + '%';
+                                    }
+                                }
                             }
                         }
                     }
                 });
+            } else {
+                // Se não há dados de volatilidade, mostrar mensagem
+                document.getElementById('volatilityIndex').textContent = 'N/A';
             }
 
             // 3. Análise Técnica Completa
