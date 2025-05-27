@@ -19,6 +19,7 @@ def format_number(value):
         return value
 
 def convert_to_col_dict(data):
+    app.logger.warning(f"[DEBUG] convert_to_col_dict: tipo={type(data)}, chaves={list(data.keys()) if isinstance(data, dict) else 'N/A'}")
     # Se já for dict de listas, retorna direto
     if isinstance(data, dict) and isinstance(data.get('date'), list):
         app.logger.info("[DEBUG] Dados já estão no formato correto (dict de listas)")
