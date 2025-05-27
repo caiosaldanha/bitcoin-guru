@@ -212,30 +212,6 @@
                             <canvas id="forecastChart" width="600" height="340" style="display:block; background:#fff;"></canvas>
                         </div>
                     </div>
-                    <div class="col-lg-4">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped table-sm">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Data Projetada (D+7)</th>
-                                        <th>Cotação Projetada</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for i in range(hist['date']|length) %}
-                                        <tr>
-                                            <td>
-                                                {{ hist['date_display'][i] if 'date_display' in hist else hist['date'][i] }}
-                                            </td>
-                                            <td class="fw-bold">
-                                                ${{ hist['pred_7d'][i]|format_number }}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
             {% else %}
                 <div class="alert alert-warning">Sem histórico de previsões disponível.</div>
