@@ -35,31 +35,14 @@ def convert_to_col_dict(data):
         if not values:
             app.logger.warning("[DEBUG] values vazio!")
             return {col: [] for col in columns}
-            
-        try:
-            # Garante que values é lista de listas
-            if isinstance(values[0], list):
-                transposed = list(zip(*values))
-            else:
-                # Caso values seja uma lista simples (uma linha só, não aninhada)
-                transposed = [[v] for v in values]
-            app.logger.info("[DEBUG] transposed: %s", transposed)
-            result = {col: list(transposed[i]) for i, col in enumerate(columns)}
-            
-            # Se temos date_display na coluna, garantimos que está disponível para o template
-            if 'date_display' in result:
-                app.logger.info("[DEBUG] date_display encontrado nos dados")
-            else:
-                app.logger.info("[DEBUG] date_display não encontrado nos dados")
-                # Se não existe o date_display mas temos date, usamos date como fallback
-                if 'date' in result:
-                    result['date_display'] = result['date']
-                
-            app.logger.info("[DEBUG] convert_to_col_dict result: %s", result)
-            return result
-        except Exception as e:
-            app.logger.error("[DEBUG] Exception in transpose: %s", e)
-            return {col: [] for col in columns}
+        # Transpõe a matriz de dados para dict de listas
+        transposed = list(zip(*values))
+        result = {col: list(transposed[i]) for i, col in enumerate(columns)}
+        # date_display fallback
+        if 'date_display' not in result and 'date' in result:
+            result['date_display'] = result['date']
+        app.logger.info("[DEBUG] convert_to_col_dict result: %s", result)
+        return result
     # Se vier como lista de dicts (orient='records')
     if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
         out = {k: [] for k in data[0].keys()}
