@@ -207,9 +207,9 @@
                 <div class="alert alert-danger">{{ hist['error'] }}</div>
             {% elif hist.get('data') and hist['data'].get('date') %}
                 <div class="row mb-4">
-                    <div class="col-lg-8">
-                        <div class="chart-container">
-                            <canvas id="forecastChart"></canvas>
+                    <div class="col-lg-8 d-flex align-items-center justify-content-center">
+                        <div class="chart-container" style="min-height:350px; min-width:100%;">
+                            <canvas id="forecastChart" style="min-height:340px; min-width:100%; background:#fff;"></canvas>
                         </div>
                     </div>
                     <div class="col-lg-4">
