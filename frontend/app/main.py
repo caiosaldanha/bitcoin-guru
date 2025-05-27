@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
 import requests
 import pandas as pd
 import os
@@ -126,7 +126,8 @@ def index():
             app.logger.info("Backend inicializado com sucesso: %s", r_refresh.json())
         except Exception as e:
             app.logger.error("Falha ao inicializar backend: %s", e)
-      return render_template("index.html", pred=pred, hist=hist, prices=prices)
+    
+    return render_template("index.html", pred=pred, hist=hist, prices=prices)
 
 @app.route("/clear_predictions")
 def clear_predictions():
@@ -143,7 +144,6 @@ def clear_predictions():
         message = f"Erro ao limpar previsões: {e}"
     
     # Redirecionar para a página principal com mensagem
-    from flask import redirect, url_for, flash
     # Redirecione para a página principal
     return redirect(url_for('index'))
 
