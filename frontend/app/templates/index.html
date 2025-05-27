@@ -201,25 +201,23 @@
         {% else %}
             <div class="alert alert-warning">Dados de cotações não disponíveis.</div>
         {% endif %}
-    </div>
-
-    <div class="chart-card">
-        <h4 class="mb-4"><i class="fas fa-history me-2 text-primary"></i>Histórico de Previsões</h4>
+    </div>    <div class="chart-card">
+        <h4 class="mb-4"><i class="fas fa-chart-line me-2 text-primary"></i>Projeção da Cotação para 7 dias</h4>
         {% if hist.get('error') %}
             <div class="alert alert-danger">{{ hist['error'] }}</div>
         {% elif hist.get('data') and hist['data'].get('date') %}
             <div class="row mb-4">
                 <div class="col-lg-8">
                     <div class="chart-container">
-                        <canvas id="historyChart"></canvas>
+                        <canvas id="forecastChart"></canvas>
                     </div>
                 </div>
                 <div class="col-lg-4">
                     <div class="table-responsive">
                         <table class="table table-hover table-striped table-sm">                            <thead class="table-dark">
                                 <tr>
-                                    <th>Data da Previsão</th>
-                                    <th>Preço Previsto</th>
+                                    <th>Data Projetada (D+7)</th>
+                                    <th>Cotação Projetada</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -245,28 +243,55 @@
 </a>
 
 <!-- Botão para limpar as previsões - ficará no canto esquerdo inferior -->
-<a href="/clear_predictions" class="btn btn-warning" style="position: fixed; bottom: 20px; left: 20px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" title="Limpar histórico de previsões">
+<a href="/clear_predictions" class="btn btn-warning" style="position: fixed; bottom: 20px; left: 20px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" title="Limpar projeções de cotação">
     <i class="fas fa-trash"></i>
 </a>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 {% if not hist.get('error') and hist.get('data') and hist['data'].get('date') %}
-<script type="text/javascript">    // Gráfico do histórico de previsões
-    var histLabels = {{ hist['data']['date']|tojson|safe }};
-    var histData = {{ hist['data']['pred_7d']|tojson|safe }};
-    new Chart(document.getElementById('historyChart'), {
+<script type="text/javascript">
+    // Gráfico de projeção da cotação
+    // Usamos apenas o preço mais recente como ponto de partida e mostramos apenas a projeção futura
+    
+    // Dados de previsão ordenados por data (crescente)
+    var forecastDates = {{ hist['data']['date']|tojson|safe }};
+    var forecastPrices = {{ hist['data']['pred_7d']|tojson|safe }};
+    
+    // Se tivermos o preço atual e a data da previsão
+    {% if pred.get('data') and pred['data'].get('price_now') and pred['data'].get('date') %}
+    // Criar um array com dois pontos: o preço atual e a previsão para daqui a 7 dias
+    var currentDate = "{{ pred['data']['date'][0] }}";
+    var currentPrice = {{ pred['data']['price_now'][0]|float }};
+    var forecastDate = "{{ pred['data']['forecast_date'][0] if pred['data'].get('forecast_date') else '' }}";
+    var forecastPrice = {{ pred['data']['pred_7d'][0]|float }};
+    
+    // Caso a data da previsão não esteja disponível no ponto de dados (versão antiga da API), usamos a primeira
+    // data do histórico como aproximação
+    if (!forecastDate) {
+        forecastDate = forecastDates[0];
+    }
+    
+    var chartLabels = [currentDate, forecastDate];
+    var chartData = [currentPrice, forecastPrice];
+    {% else %}
+    // Fallback se não tivermos os dados atuais
+    var chartLabels = forecastDates;
+    var chartData = forecastPrices;
+    {% endif %}
+    
+    new Chart(document.getElementById('forecastChart'), {
         type: 'line',
         data: {
-            labels: histLabels,
+            labels: chartLabels,
             datasets: [{
-                label: 'Previsão de Preço',
-                data: histData,
+                label: 'Cotação Projetada (USD)',
+                data: chartData,
                 borderColor: 'rgb(59, 130, 246)',
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
                 borderWidth: 2,
                 fill: true,
-                tension: 0.2
+                tension: 0.1
             }]
         },
         options: {
@@ -274,7 +299,17 @@
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: true },
-                tooltip: { mode: 'index', intersect: false }
+                tooltip: { 
+                    mode: 'index', 
+                    intersect: false,
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            var item = tooltipItems[0];
+                            var date = chartLabels[item.dataIndex];
+                            return date === currentDate ? "Data Atual" : "Data Projetada";
+                        }
+                    }
+                }
             },
             scales: {
                 y: { 

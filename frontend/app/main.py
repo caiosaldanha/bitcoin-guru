@@ -131,17 +131,17 @@ def index():
 
 @app.route("/clear_predictions")
 def clear_predictions():
-    """Rota para limpar as previsões e redirecionar para a página principal."""
+    """Rota para limpar as projeções de cotação e redirecionar para a página principal."""
     message = ""
     try:
-        app.logger.info("Limpando tabela de previsões via API")
+        app.logger.info("Limpando tabela de projeções via API")
         response = requests.post(f"{API_URL}/clear_predictions", timeout=10)
         response.raise_for_status()
-        app.logger.info("Tabela de previsões limpa com sucesso")
-        message = "Histórico de previsões limpo com sucesso!"
+        app.logger.info("Tabela de projeções limpa com sucesso")
+        message = "Projeções de cotação limpas com sucesso!"
     except Exception as e:
-        app.logger.error(f"Erro ao limpar previsões: {e}")
-        message = f"Erro ao limpar previsões: {e}"
+        app.logger.error(f"Erro ao limpar projeções: {e}")
+        message = f"Erro ao limpar projeções: {e}"
     
     # Redirecionar para a página principal com mensagem
     # Redirecione para a página principal
