@@ -107,253 +107,256 @@
     </style>
 </head>
 <body>
-<div class="container mt-4 mb-5">
-    <div class="row align-items-center mb-4">
-        <div class="col-md-8">
-            <h1 class="header-title"><i class="fas fa-brands fa-btc text-warning me-2"></i>Bitcoin Guru</h1>
-            <p class="text-muted">Sua consultoria inteligente para investimentos em Bitcoin</p>
+    <div class="container mt-4 mb-5">
+        <div class="row align-items-center mb-4">
+            <div class="col-md-8">
+                <h1 class="header-title"><i class="fas fa-brands fa-btc text-warning me-2"></i>Bitcoin Guru</h1>
+                <p class="text-muted">Sua consultoria inteligente para investimentos em Bitcoin</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <p class="mb-0 text-muted"><small>Data da análise: {{ pred['data']['date'][0] if pred.get('data') and pred['data'].get('date') else 'Indisponível' }}</small></p>
+            </div>
         </div>
-        <div class="col-md-4 text-end">
-            <p class="mb-0 text-muted"><small>Data da análise: {{ pred['data']['date'][0] if pred.get('data') and pred['data'].get('date') else 'Indisponível' }}</small></p>
-        </div>
-    </div>
 
-    <div class="prediction-container">
-    {% if pred.get('error') %}
-        <div class="alert alert-danger">{{ pred['error'] }}</div>
-    {% elif pred.get('data') and pred['data'].get('date') %}
-        {% set current_price = pred['data']['price_now'][0]|float %}
-        {% set future_price = pred['data']['pred_7d'][0]|float %}
-        {% set percent_change = ((future_price - current_price) / current_price * 100)|round(2) %}
-        {% set recommendation = "COMPRAR" if percent_change > 2 else ("VENDER" if percent_change < -2 else "MANTER") %}
-        {% set card_class = "buy" if recommendation == "COMPRAR" else ("sell" if recommendation == "VENDER" else "hold") %}
-        {% set icon_class = "fa-arrow-trend-up" if recommendation == "COMPRAR" else ("fa-arrow-trend-down" if recommendation == "VENDER" else "fa-grip-lines") %}
-        
-        <div class="row">
-            <div class="col-12">
-                <div class="card recommendation-card {{ card_class }}">
-                    <div class="card-body">
-                        <h2 class="card-title mb-3">
-                            <i class="fas {{ icon_class }} me-2"></i>
-                            Recomendação: <strong>{{ recommendation }}</strong>
-                        </h2>
-                        <p class="card-text lead mb-4">
-                            {% if recommendation == "COMPRAR" %}
-                                Nossos modelos indicam uma alta de <strong class="text-success">{{ percent_change }}%</strong> nos próximos 7 dias.
-                                É um bom momento para investir em Bitcoin!
-                            {% elif recommendation == "VENDER" %}
-                                Nossos modelos preveem uma queda de <strong class="text-danger">{{ percent_change|abs }}%</strong> nos próximos 7 dias.
-                                Considere vender ou aguardar por um melhor momento para comprar.
-                            {% else %}
-                                O preço deve permanecer estável ({{ percent_change }}%) nos próximos 7 dias.
-                                Mantenha seus investimentos e monitore o mercado.
-                            {% endif %}
-                        </p>
-                        
-                        <div class="row mt-4">                            <div class="col-md-4 mb-3">
-                                <div class="price-card">
-                                    <h6>Preço Atual ({{ pred['data']['date'][0] }})</h6>
-                                    <div class="price-value">${{ current_price|format_number }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="price-card">
-                                    <h6>Preço Projetado ({{ pred['data']['forecast_date'][0] if pred['data'].get('forecast_date') else 'D+7' }})</h6>
-                                    <div class="price-value">${{ future_price|format_number }}</div>
-                                    <span class="badge {{ 'bg-success' if percent_change > 0 else ('bg-danger' if percent_change < 0 else 'bg-warning') }}">
-                                        <i class="fas {{ 'fa-arrow-up' if percent_change > 0 else ('fa-arrow-down' if percent_change < 0 else 'fa-equals') }}"></i>
-                                        {{ percent_change }}%
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="price-card">
-                                    <h6>Confiabilidade do Modelo</h6>
-                                    <div class="mt-2">
-                                        <span class="badge bg-light text-dark metrics-badge" title="Erro Médio Absoluto (treino)">
-                                            <i class="fas fa-chart-line me-1"></i> MAE: ${{ pred['data']['mae_train'][0]|round(2) }}
-                                        </span>
-                                        <span class="badge bg-light text-dark metrics-badge" title="Coeficiente de Determinação (treino)">
-                                            <i class="fas fa-square-root-variable me-1"></i> R²: {{ pred['data']['r2_train'][0]|round(2) }}
-                                        </span>
+        <div class="prediction-container">
+            {% if pred.get('error') %}
+                <div class="alert alert-danger">{{ pred['error'] }}</div>
+            {% elif pred.get('data') and pred['data'].get('date') %}
+                {% set current_price = pred['data']['price_now'][0]|float %}
+                {% set future_price = pred['data']['pred_7d'][0]|float %}
+                {% set percent_change = ((future_price - current_price) / current_price * 100)|round(2) %}
+                {% set recommendation = "COMPRAR" if percent_change > 2 else ("VENDER" if percent_change < -2 else "MANTER") %}
+                {% set card_class = "buy" if recommendation == "COMPRAR" else ("sell" if recommendation == "VENDER" else "hold") %}
+                {% set icon_class = "fa-arrow-trend-up" if recommendation == "COMPRAR" else ("fa-arrow-trend-down" if recommendation == "VENDER" else "fa-grip-lines") %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card recommendation-card {{ card_class }}">
+                            <div class="card-body">
+                                <h2 class="card-title mb-3">
+                                    <i class="fas {{ icon_class }} me-2"></i>
+                                    Recomendação: <strong>{{ recommendation }}</strong>
+                                </h2>
+                                <p class="card-text lead mb-4">
+                                    {% if recommendation == "COMPRAR" %}
+                                        Nossos modelos indicam uma alta de <strong class="text-success">{{ percent_change }}%</strong> nos próximos 7 dias.
+                                        É um bom momento para investir em Bitcoin!
+                                    {% elif recommendation == "VENDER" %}
+                                        Nossos modelos preveem uma queda de <strong class="text-danger">{{ percent_change|abs }}%</strong> nos próximos 7 dias.
+                                        Considere vender ou aguardar por um melhor momento para comprar.
+                                    {% else %}
+                                        O preço deve permanecer estável ({{ percent_change }}%) nos próximos 7 dias.
+                                        Mantenha seus investimentos e monitore o mercado.
+                                    {% endif %}
+                                </p>
+                                <div class="row mt-4">
+                                    <div class="col-md-4 mb-3">
+                                        <div class="price-card">
+                                            <h6>Preço Atual ({{ pred['data']['date'][0] }})</h6>
+                                            <div class="price-value">${{ current_price|format_number }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="price-card">
+                                            <h6>Preço Projetado ({{ pred['data']['forecast_date'][0] if pred['data'].get('forecast_date') else 'D+7' }})</h6>
+                                            <div class="price-value">${{ future_price|format_number }}</div>
+                                            <span class="badge {{ 'bg-success' if percent_change > 0 else ('bg-danger' if percent_change < 0 else 'bg-warning') }}">
+                                                <i class="fas {{ 'fa-arrow-up' if percent_change > 0 else ('fa-arrow-down' if percent_change < 0 else 'fa-equals') }}"></i>
+                                                {{ percent_change }}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="price-card">
+                                            <h6>Confiabilidade do Modelo</h6>
+                                            <div class="mt-2">
+                                                <span class="badge bg-light text-dark metrics-badge" title="Erro Médio Absoluto (treino)">
+                                                    <i class="fas fa-chart-line me-1"></i> MAE: ${{ pred['data']['mae_train'][0]|round(2) }}
+                                                </span>
+                                                <span class="badge bg-light text-dark metrics-badge" title="Coeficiente de Determinação (treino)">
+                                                    <i class="fas fa-square-root-variable me-1"></i> R²: {{ pred['data']['r2_train'][0]|round(2) }}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            {% else %}
+                <div class="alert alert-warning">Sem dados de previsão disponíveis.</div>
+            {% endif %}
         </div>
-    {% else %}
-        <div class="alert alert-warning">Sem dados de previsão disponíveis.</div>
-    {% endif %}
-    </div>
 
-    <div class="chart-card">
-        <h4 class="mb-4"><i class="fas fa-chart-line me-2 text-primary"></i>Cotações dos Últimos 30 Dias</h4>
-        {% if prices.get('error') %}
-            <div class="alert alert-danger">{{ prices['error'] }}</div>
-        {% elif prices.get('data') and prices['data'].get('date') %}
-            <div class="chart-container">
-                <canvas id="pricesChart"></canvas>
-            </div>
-        {% else %}
-            <div class="alert alert-warning">Dados de cotações não disponíveis.</div>
-        {% endif %}
-    </div>    <div class="chart-card">
-        <h4 class="mb-4"><i class="fas fa-chart-line me-2 text-primary"></i>Projeção da Cotação para 7 dias</h4>
-        {% if hist.get('error') %}
-            <div class="alert alert-danger">{{ hist['error'] }}</div>
-        {% elif hist.get('data') and hist['data'].get('date') %}
-            <div class="row mb-4">
-                <div class="col-lg-8">
-                    <div class="chart-container">
-                        <canvas id="forecastChart"></canvas>
+        <div class="chart-card">
+            <h4 class="mb-4"><i class="fas fa-chart-line me-2 text-primary"></i>Cotações dos Últimos 30 Dias</h4>
+            {% if prices.get('error') %}
+                <div class="alert alert-danger">{{ prices['error'] }}</div>
+            {% elif prices.get('data') and prices['data'].get('date') %}
+                <div class="chart-container">
+                    <canvas id="pricesChart"></canvas>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">Dados de cotações não disponíveis.</div>
+            {% endif %}
+        </div>
+
+        <div class="chart-card">
+            <h4 class="mb-4"><i class="fas fa-chart-line me-2 text-primary"></i>Projeção da Cotação para 7 dias</h4>
+            {% if hist.get('error') %}
+                <div class="alert alert-danger">{{ hist['error'] }}</div>
+            {% elif hist.get('data') and hist['data'].get('date') %}
+                <div class="row mb-4">
+                    <div class="col-lg-8">
+                        <div class="chart-container">
+                            <canvas id="forecastChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped table-sm">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Data Projetada (D+7)</th>
+                                        <th>Cotação Projetada</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for i in range(hist['data']['date']|length) %}
+                                        <tr>
+                                            <td>
+                                                {{ hist['data']['date_display'][i] if 'date_display' in hist['data'] else hist['data']['date'][i] }}
+                                            </td>
+                                            <td class="fw-bold">
+                                                ${{ hist['data']['pred_7d'][i]|format_number }}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-4">
-                    <div class="table-responsive">                        <table class="table table-hover table-striped table-sm">                            <thead class="table-dark">                                <tr>
-                                    <th>Data Projetada (D+7)</th>
-                                    <th>Cotação Projetada</th>
-                                </tr>
-                            </thead>
-                            <tbody>                                {% for i in range(hist['data']['date']|length) %}
-                                <tr>
-                                    <td>{{ hist['data']['date_display'][i] if 'date_display' in hist['data'] else hist['data']['date'][i] }}</td>
-                                    <td class="fw-bold">${{ hist['data']['pred_7d'][i]|format_number }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        {% else %}
-            <div class="alert alert-warning">Sem histórico de previsões disponível.</div>
-        {% endif %}
+            {% else %}
+                <div class="alert alert-warning">Sem histórico de previsões disponível.</div>
+            {% endif %}
+        </div>
     </div>
-</div>
 
-<a href="/" class="btn refresh-btn" title="Atualizar previsão">
-    <i class="fas fa-sync-alt"></i>
-</a>
+    <a href="/" class="btn refresh-btn" title="Atualizar previsão">
+        <i class="fas fa-sync-alt"></i>
+    </a>
 
-<!-- Botão para limpar as previsões - ficará no canto esquerdo inferior -->
-<a href="/clear_predictions" class="btn btn-warning" style="position: fixed; bottom: 20px; left: 20px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" title="Limpar projeções de cotação">
-    <i class="fas fa-trash"></i>
-</a>
+    <!-- Botão para limpar as previsões - ficará no canto esquerdo inferior -->
+    <a href="/clear_predictions" class="btn btn-warning" style="position: fixed; bottom: 20px; left: 20px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" title="Limpar projeções de cotação">
+        <i class="fas fa-trash"></i>
+    </a>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-{% if not hist.get('error') and hist.get('data') and hist['data'].get('date') %}
-<script type="text/javascript">
-    // Gráfico de projeção da cotação
-    // Usamos apenas o preço mais recente como ponto de partida e mostramos apenas a projeção futura
-    
-    // Dados de previsão ordenados por data (crescente)
-    var forecastDates = {{ hist['data']['date']|tojson|safe }};
-    var forecastPrices = {{ hist['data']['pred_7d']|tojson|safe }};
-    
-    // Se tivermos o preço atual e a data da previsão
-    {% if pred.get('data') and pred['data'].get('price_now') and pred['data'].get('date') %}
-    // Criar um array com dois pontos: o preço atual e a previsão para daqui a 7 dias
-    var currentDate = "{{ pred['data']['date'][0] }}";
-    var currentPrice = {{ pred['data']['price_now'][0]|float }};
-    var forecastDate = "{{ pred['data']['forecast_date'][0] if pred['data'].get('forecast_date') else '' }}";
-    var forecastPrice = {{ pred['data']['pred_7d'][0]|float }};
-    
-    // Caso a data da previsão não esteja disponível no ponto de dados (versão antiga da API), usamos a primeira
-    // data do histórico como aproximação
-    if (!forecastDate) {
-        forecastDate = forecastDates[0];
-    }
-    
-    var chartLabels = [currentDate, forecastDate];
-    // Show full precise values for forecast
-    var chartData = [parseFloat(currentPrice.toFixed(2)), parseFloat(forecastPrice.toFixed(2))];
-    {% else %}
-    // Fallback se não tivermos os dados atuais
-    var chartLabels = forecastDates;
-    var chartData = forecastPrices;
-    {% endif %}
-    
-    new Chart(document.getElementById('forecastChart'), {
-        type: 'line',
-        data: {
-            labels: chartLabels,
-            datasets: [{
-                label: 'Cotação Projetada (USD)',
-                data: chartData,
-                borderColor: 'rgb(59, 130, 246)',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: true },
-                tooltip: { 
-                    mode: 'index', 
-                    intersect: false,
-                    callbacks: {
-                        title: function(tooltipItems) {
-                            var item = tooltipItems[0];
-                            var date = chartLabels[item.dataIndex];
-                            return date === currentDate ? "Data Atual" : "Data Projetada";
+    {# --- Prepare JS variables for forecast and prices charts outside of <script> tags --- #}
+    {% if not hist.get('error') and hist.get('data') and hist['data'].get('date') %}
+        {% set forecastDates = hist['data']['date']|tojson %}
+        {% set forecastPrices = hist['data']['pred_7d']|tojson %}
+        {% if pred.get('data') and pred['data'].get('price_now') and pred['data'].get('date') %}
+            {% set currentDate = pred['data']['date'][0] %}
+            {% set currentPrice = '%.2f'|format(pred['data']['price_now'][0]|float) %}
+            {% set forecastDate = pred['data']['forecast_date'][0] if pred['data'].get('forecast_date') else '' %}
+            {% set forecastPrice = '%.2f'|format(pred['data']['pred_7d'][0]|float) %}
+            {% if not forecastDate %}
+                {% set forecastDate = hist['data']['date'][0] %}
+            {% endif %}
+            {% set chartLabels = [currentDate, forecastDate]|tojson %}
+            {% set chartData = [currentPrice, forecastPrice]|tojson %}
+        {% else %}
+            {% set chartLabels = forecastDates %}
+            {% set chartData = forecastPrices %}
+        {% endif %}
+        <script type="text/javascript">
+            var chartLabels = {{ chartLabels|safe }};
+            var chartData = {{ chartData|safe }};
+            var currentDate = {{ '"' ~ currentDate ~ '"' if pred.get('data') and pred['data'].get('price_now') and pred['data'].get('date') else 'null' }};
+        </script>
+        <script type="text/javascript">
+            new Chart(document.getElementById('forecastChart'), {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Cotação Projetada (USD)',
+                        data: chartData,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    var item = tooltipItems[0];
+                                    var date = chartLabels[item.dataIndex];
+                                    return (currentDate && date === currentDate) ? "Data Atual" : "Data Projetada";
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { callback: function(value) { return '$' + value.toLocaleString(); } }
                         }
                     }
                 }
-            },
-            scales: {
-                y: { 
-                    ticks: { callback: function(value) { return '$' + value.toLocaleString(); } }
-                }
-            }
-        }
-    });
-</script>
-{% endif %}
+            });
+        </script>
+    {% endif %}
 
-{% if not prices.get('error') and prices.get('data') and prices['data'].get('date') %}
-<script type="text/javascript">
-    // Gráfico das cotações dos últimos 30 dias
-    var priceLabels = {{ prices['data']['date']|tojson|safe }};
-    var priceData = {{ prices['data']['price']|tojson|safe }};
-    
-    new Chart(document.getElementById('pricesChart'), {
-        type: 'line',
-        data: {
-            labels: priceLabels,
-            datasets: [{
-                label: 'Preço do Bitcoin (USD)',
-                data: priceData,
-                borderColor: 'rgb(234, 179, 8)',
-                backgroundColor: 'rgba(234, 179, 8, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: true },
-                tooltip: { mode: 'index', intersect: false }
-            },
-            scales: {
-                y: { 
-                    beginAtZero: false,
-                    ticks: { callback: function(value) { return '$' + value.toLocaleString(); } }
+    {% if not prices.get('error') and prices.get('data') and prices['data'].get('date') %}
+        {% set priceLabels = prices['data']['date']|tojson %}
+        {% set priceData = prices['data']['price']|tojson %}
+        <script type="text/javascript">
+            var priceLabels = {{ priceLabels|safe }};
+            var priceData = {{ priceData|safe }};
+        </script>
+        <script type="text/javascript">
+            new Chart(document.getElementById('pricesChart'), {
+                type: 'line',
+                data: {
+                    labels: priceLabels,
+                    datasets: [{
+                        label: 'Preço do Bitcoin (USD)',
+                        data: priceData,
+                        borderColor: 'rgb(234, 179, 8)',
+                        backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: { callback: function(value) { return '$' + value.toLocaleString(); } }
+                        }
+                    }
                 }
-            }
-        }
-    });
-</script>
-{% endif %}
+            });
+        </script>
+    {% endif %}
 </body>
 </html>
