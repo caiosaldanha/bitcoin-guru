@@ -205,7 +205,7 @@
             <h4 class="mb-4"><i class="fas fa-chart-line me-2 text-primary"></i>Projeção da Cotação para 7 dias</h4>
             {% if hist.get('error') %}
                 <div class="alert alert-danger">{{ hist['error'] }}</div>
-            {% elif hist.get('data') and hist['data'].get('date') %}
+            {% elif hist.get('date') %}
                 <div class="row mb-4">
                     <div class="col-lg-8 d-flex align-items-center justify-content-center">
                         <div class="chart-container w-100" style="min-height:350px; min-width:100%;">
@@ -222,13 +222,13 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for i in range(hist['data']['date']|length) %}
+                                    {% for i in range(hist['date']|length) %}
                                         <tr>
                                             <td>
-                                                {{ hist['data']['date_display'][i] if 'date_display' in hist['data'] else hist['data']['date'][i] }}
+                                                {{ hist['date_display'][i] if 'date_display' in hist else hist['date'][i] }}
                                             </td>
                                             <td class="fw-bold">
-                                                ${{ hist['data']['pred_7d'][i]|format_number }}
+                                                ${{ hist['pred_7d'][i]|format_number }}
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -255,27 +255,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     {# --- Prepare JS variables for forecast and prices charts outside of <script> tags --- #}
-    {% if not hist.get('error') and hist.get('data') and hist['data'].get('date') %}
-        {% set forecastDates = hist['data']['date']|tojson %}
-        {% set forecastPrices = hist['data']['pred_7d']|tojson %}
-        {% if pred.get('data') and pred['data'].get('price_now') and pred['data'].get('date') %}
-            {% set currentDate = pred['data']['date'][0] %}
-            {% set currentPrice = '%.2f'|format(pred['data']['price_now'][0]|float) %}
-            {% set forecastDate = pred['data']['forecast_date'][0] if pred['data'].get('forecast_date') else '' %}
-            {% set forecastPrice = '%.2f'|format(pred['data']['pred_7d'][0]|float) %}
-            {% if not forecastDate %}
-                {% set forecastDate = hist['data']['date'][0] %}
-            {% endif %}
-            {% set chartLabels = [currentDate, forecastDate]|tojson %}
-            {% set chartData = [currentPrice, forecastPrice]|tojson %}
-        {% else %}
-            {% set chartLabels = forecastDates %}
-            {% set chartData = forecastPrices %}
-        {% endif %}
+    {% if not hist.get('error') and hist.get('date') %}
+        {% set forecastDates = hist['date']|tojson %}
+        {% set forecastPrices = hist['pred_7d']|tojson %}
         <script type="text/javascript">
-            var chartLabels = {{ chartLabels|safe }};
-            var chartData = {{ chartData|safe }};
-            var currentDate = {{ '"' ~ currentDate ~ '"' if pred.get('data') and pred['data'].get('price_now') and pred['data'].get('date') else 'null' }};
+            var chartLabels = {{ forecastDates|safe }};
+            var chartData = {{ forecastPrices|safe }};
+            var currentDate = null;
         </script>
         <script type="text/javascript">
             new Chart(document.getElementById('forecastChart'), {
@@ -319,9 +305,9 @@
         </script>
     {% endif %}
 
-    {% if not prices.get('error') and prices.get('data') and prices['data'].get('date') %}
-        {% set priceLabels = prices['data']['date']|tojson %}
-        {% set priceData = prices['data']['price']|tojson %}
+    {% if not prices.get('error') and prices.get('date') %}
+        {% set priceLabels = prices['date']|tojson %}
+        {% set priceData = prices['price']|tojson %}
         <script type="text/javascript">
             var priceLabels = {{ priceLabels|safe }};
             var priceData = {{ priceData|safe }};
