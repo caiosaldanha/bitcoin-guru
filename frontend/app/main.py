@@ -118,7 +118,7 @@ def index():
         except Exception as e:
             app.logger.error("Falha ao inicializar backend: %s", e)
     
-    return render_template("index.html", pred=pred, hist=hist, prices=prices)
+    return render_template("index.html", pred={'data': pred}, hist={'data': hist}, prices={'data': prices})
 
 @app.route("/clear_predictions")
 def clear_predictions():
