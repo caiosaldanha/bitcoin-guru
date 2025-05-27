@@ -65,8 +65,8 @@ def index():
         pred = r.json()
         app.logger.info("[DEBUG] /predict raw: %s", pred)
         if 'data' in pred:
-            pred['data'] = convert_to_col_dict(pred['data'])
-            app.logger.info("[DEBUG] /predict converted: %s", pred['data'])
+            pred = convert_to_col_dict(pred)
+            app.logger.info("[DEBUG] /predict converted: %s", pred)
     except requests.exceptions.RequestException as e:
         app.logger.error("Erro ao acessar API /predict: %s", e)
         pred = {'error': f'Erro ao acessar API /predict: {e}'}
@@ -82,8 +82,8 @@ def index():
         hist = r_hist.json()
         app.logger.info("[DEBUG] /history raw: %s", hist)
         if 'data' in hist:
-            hist['data'] = convert_to_col_dict(hist['data']) 
-            app.logger.info("[DEBUG] /history converted: %s", hist['data'])
+            hist = convert_to_col_dict(hist)
+            app.logger.info("[DEBUG] /history converted: %s", hist)
     except requests.exceptions.RequestException as e:
         app.logger.error("Erro ao acessar API /history: %s", e)
         hist = {'error': f'Erro ao acessar API /history: {e}'}
@@ -99,8 +99,8 @@ def index():
         prices = r_prices.json()
         app.logger.info("[DEBUG] /prices raw: %s", prices)
         if 'data' in prices:
-            prices['data'] = convert_to_col_dict(prices['data'])
-            app.logger.info("[DEBUG] /prices converted: %s", prices['data'])
+            prices = convert_to_col_dict(prices)
+            app.logger.info("[DEBUG] /prices converted: %s", prices)
     except requests.exceptions.RequestException as e:
         app.logger.error("Erro ao acessar API /prices: %s", e)
         prices = {'error': f'Erro ao acessar API /prices: {e}'}
