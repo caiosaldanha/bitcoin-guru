@@ -150,17 +150,16 @@
                             {% endif %}
                         </p>
                         
-                        <div class="row mt-4">
-                            <div class="col-md-4 mb-3">
+                        <div class="row mt-4">                            <div class="col-md-4 mb-3">
                                 <div class="price-card">
-                                    <h6>Preço Atual</h6>
-                                    <div class="price-value">${{ current_price|round(2)|int|format_number }}</div>
+                                    <h6>Preço Atual ({{ pred['data']['date'][0] }})</h6>
+                                    <div class="price-value">${{ current_price|format_number }}</div>
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <div class="price-card">
-                                    <h6>Previsão (7 dias)</h6>
-                                    <div class="price-value">${{ future_price|round(2)|int|format_number }}</div>
+                                    <h6>Preço Projetado ({{ pred['data']['forecast_date'][0] if pred['data'].get('forecast_date') else 'D+7' }})</h6>
+                                    <div class="price-value">${{ future_price|format_number }}</div>
                                     <span class="badge {{ 'bg-success' if percent_change > 0 else ('bg-danger' if percent_change < 0 else 'bg-warning') }}">
                                         <i class="fas {{ 'fa-arrow-up' if percent_change > 0 else ('fa-arrow-down' if percent_change < 0 else 'fa-equals') }}"></i>
                                         {{ percent_change }}%
@@ -220,8 +219,7 @@
                                     <th>Cotação Projetada</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {% for i in range(hist['data']['date']|length) %}
+                            <tbody>                                {% for i in range(hist['data']['date']|length) %}
                                 <tr>
                                     <td>{{ hist['data']['date'][i] }}</td>
                                     <td class="fw-bold">${{ hist['data']['pred_7d'][i]|format_number }}</td>
@@ -273,7 +271,8 @@
     }
     
     var chartLabels = [currentDate, forecastDate];
-    var chartData = [currentPrice, forecastPrice];
+    // Show full precise values for forecast
+    var chartData = [parseFloat(currentPrice.toFixed(2)), parseFloat(forecastPrice.toFixed(2))];
     {% else %}
     // Fallback se não tivermos os dados atuais
     var chartLabels = forecastDates;

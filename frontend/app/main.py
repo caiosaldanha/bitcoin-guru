@@ -13,13 +13,8 @@ def format_number(value):
     try:
         # Tenta converter para float primeiro (mais flexível)
         num = float(value)
-        # Verifica se é um valor inteiro (sem decimais)
-        if num.is_integer():
-            # Formata sem casas decimais
-            return "{:,.0f}".format(num).replace(",", ".")
-        else:
-            # Formata com 2 casas decimais para valores com parte decimal
-            return "{:,.2f}".format(num).replace(",", ".")
+        # Formatamos sempre com 2 casas decimais para valores monetários
+        return "{:,.2f}".format(num).replace(",", ".")
     except (ValueError, TypeError):
         return value
 
