@@ -114,16 +114,16 @@
                 <p class="text-muted">Sua consultoria inteligente para investimentos em Bitcoin</p>
             </div>
             <div class="col-md-4 text-end">
-                <p class="mb-0 text-muted"><small>Data da análise: {{ pred['data']['date'][0] if pred.get('data') and pred['data'].get('date') else 'Indisponível' }}</small></p>
+                <p class="mb-0 text-muted"><small>Data da análise: {{ pred['date'][0] if pred.get('date') else 'Indisponível' }}</small></p>
             </div>
         </div>
 
         <div class="prediction-container">
             {% if pred.get('error') %}
                 <div class="alert alert-danger">{{ pred['error'] }}</div>
-            {% elif pred.get('data') and pred['data'].get('date') %}
-                {% set current_price = pred['data']['price_now'][0]|float %}
-                {% set future_price = pred['data']['pred_7d'][0]|float %}
+            {% elif pred.get('date') %}
+                {% set current_price = pred['price_now'][0]|float %}
+                {% set future_price = pred['pred_7d'][0]|float %}
                 {% set percent_change = ((future_price - current_price) / current_price * 100)|round(2) %}
                 {% set recommendation = "COMPRAR" if percent_change > 2 else ("VENDER" if percent_change < -2 else "MANTER") %}
                 {% set card_class = "buy" if recommendation == "COMPRAR" else ("sell" if recommendation == "VENDER" else "hold") %}
@@ -151,13 +151,13 @@
                                 <div class="row mt-4">
                                     <div class="col-md-4 mb-3">
                                         <div class="price-card">
-                                            <h6>Preço Atual ({{ pred['data']['date'][0] }})</h6>
+                                            <h6>Preço Atual ({{ pred['date'][0] }})</h6>
                                             <div class="price-value">${{ current_price|format_number }}</div>
                                         </div>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <div class="price-card">
-                                            <h6>Preço Projetado ({{ pred['data']['forecast_date'][0] if pred['data'].get('forecast_date') else 'D+7' }})</h6>
+                                            <h6>Preço Projetado ({{ pred['forecast_date'][0] if pred.get('forecast_date') else 'D+7' }})</h6>
                                             <div class="price-value">${{ future_price|format_number }}</div>
                                             <span class="badge {{ 'bg-success' if percent_change > 0 else ('bg-danger' if percent_change < 0 else 'bg-warning') }}">
                                                 <i class="fas {{ 'fa-arrow-up' if percent_change > 0 else ('fa-arrow-down' if percent_change < 0 else 'fa-equals') }}"></i>
@@ -170,10 +170,10 @@
                                             <h6>Confiabilidade do Modelo</h6>
                                             <div class="mt-2">
                                                 <span class="badge bg-light text-dark metrics-badge" title="Erro Médio Absoluto (treino)">
-                                                    <i class="fas fa-chart-line me-1"></i> MAE: ${{ pred['data']['mae_train'][0]|round(2) }}
+                                                    <i class="fas fa-chart-line me-1"></i> MAE: ${{ pred['mae_train'][0]|round(2) }}
                                                 </span>
                                                 <span class="badge bg-light text-dark metrics-badge" title="Coeficiente de Determinação (treino)">
-                                                    <i class="fas fa-square-root-variable me-1"></i> R²: {{ pred['data']['r2_train'][0]|round(2) }}
+                                                    <i class="fas fa-square-root-variable me-1"></i> R²: {{ pred['r2_train'][0]|round(2) }}
                                                 </span>
                                             </div>
                                         </div>
@@ -192,7 +192,7 @@
             <h4 class="mb-4"><i class="fas fa-chart-line me-2 text-primary"></i>Cotações dos Últimos 30 Dias</h4>
             {% if prices.get('error') %}
                 <div class="alert alert-danger">{{ prices['error'] }}</div>
-            {% elif prices.get('data') and prices['data'].get('date') %}
+            {% elif prices.get('date') %}
                 <div class="chart-container">
                     <canvas id="pricesChart"></canvas>
                 </div>
