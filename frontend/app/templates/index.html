@@ -305,10 +305,10 @@
             };            // 1. Gráfico de Performance do Modelo
             var performanceCtx = document.getElementById('modelPerformanceChart');
             if (performanceCtx) {
-                // Verificar se temos dados de performance, caso contrário usar dados atuais
+                // Verificar se temos dados de performance
                 var performanceHistory = techData.performance_history || [];
                 
-                // Se não há dados de histórico, criar um ponto com as métricas atuais
+                // Se não há dados suficientes, usar as métricas atuais como referência
                 if (performanceHistory.length === 0) {
                     var today = new Date().toISOString().split('T')[0];
                     performanceHistory = [{
@@ -318,30 +318,41 @@
                     }];
                 }
                 
+                // Formatar datas para exibição (DD/MM)
+                var formattedLabels = performanceHistory.map(p => {
+                    var date = new Date(p.date);
+                    return (date.getDate()).toString().padStart(2, '0') + '/' + 
+                           (date.getMonth() + 1).toString().padStart(2, '0');
+                });
+                
                 new Chart(performanceCtx, {
                     type: 'line',
                     data: {
-                        labels: performanceHistory.map(p => p.date),
+                        labels: formattedLabels,
                         datasets: [
                             {
                                 label: 'MAE (Erro Médio)',
                                 data: performanceHistory.map(p => p.mae),
                                 borderColor: 'rgb(220, 53, 69)',
                                 backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                                borderWidth: 2,
+                                borderWidth: 3,
                                 fill: false,
                                 tension: 0.1,
-                                yAxisID: 'y'
+                                yAxisID: 'y',
+                                pointRadius: 4,
+                                pointHoverRadius: 6
                             },
                             {
                                 label: 'R² (Precisão %)',
                                 data: performanceHistory.map(p => p.r2 * 100),
                                 borderColor: 'rgb(25, 135, 84)',
                                 backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                                borderWidth: 2,
+                                borderWidth: 3,
                                 fill: false,
                                 tension: 0.1,
-                                yAxisID: 'y1'
+                                yAxisID: 'y1',
+                                pointRadius: 4,
+                                pointHoverRadius: 6
                             }
                         ]
                     },
@@ -349,22 +360,41 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
-                            y: {
+                            x: {
+                                title: { 
+                                    display: true, 
+                                    text: 'Últimos 14 dias',
+                                    font: { weight: 'bold' }
+                                },
+                                grid: { display: true }
+                            },                            y: {
                                 type: 'linear',
                                 display: true,
                                 position: 'left',
-                                title: { display: true, text: 'MAE ($)' },
+                                title: { 
+                                    display: true, 
+                                    text: 'MAE ($)',
+                                    font: { weight: 'bold' }
+                                },
+                                beginAtZero: false,
                                 ticks: {
                                     callback: function(value) {
-                                        return '$' + value.toLocaleString();
+                                        return '$' + Math.round(value).toLocaleString();
                                     }
-                                }
+                                },
+                                grid: { color: 'rgba(220, 53, 69, 0.1)' }
                             },
                             y1: {
                                 type: 'linear',
                                 display: true,
                                 position: 'right',
-                                title: { display: true, text: 'Precisão (%)' },
+                                title: { 
+                                    display: true, 
+                                    text: 'Precisão (%)',
+                                    font: { weight: 'bold' }
+                                },
+                                min: 70,  // Começar em 70% para melhor visualização
+                                max: 100, // Terminar em 100%
                                 grid: { drawOnChartArea: false },
                                 ticks: {
                                     callback: function(value) {
