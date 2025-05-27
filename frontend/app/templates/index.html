@@ -110,7 +110,7 @@
 <div class="container mt-4 mb-5">
     <div class="row align-items-center mb-4">
         <div class="col-md-8">
-            <h1 class="header-title"><i class="fas fa-bitcoin text-warning me-2"></i>Bitcoin Guru</h1>
+            <h1 class="header-title"><i class="fas fa-brands fa-btc text-warning me-2"></i>Bitcoin Guru</h1>
             <p class="text-muted">Sua consultoria inteligente para investimentos em Bitcoin</p>
         </div>
         <div class="col-md-4 text-end">
@@ -212,16 +212,14 @@
                     </div>
                 </div>
                 <div class="col-lg-4">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped table-sm">                            <thead class="table-dark">
-                                <tr>
+                    <div class="table-responsive">                        <table class="table table-hover table-striped table-sm">                            <thead class="table-dark">                                <tr>
                                     <th>Data Projetada (D+7)</th>
                                     <th>Cotação Projetada</th>
                                 </tr>
                             </thead>
                             <tbody>                                {% for i in range(hist['data']['date']|length) %}
                                 <tr>
-                                    <td>{{ hist['data']['date'][i] }}</td>
+                                    <td>{{ hist['data']['date_display'][i] if 'date_display' in hist['data'] else hist['data']['date'][i] }}</td>
                                     <td class="fw-bold">${{ hist['data']['pred_7d'][i]|format_number }}</td>
                                 </tr>
                                 {% endfor %}

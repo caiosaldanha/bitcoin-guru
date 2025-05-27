@@ -20,7 +20,8 @@ def format_number(value):
 
 def convert_to_col_dict(data):
     # Se já for dict de listas, retorna direto
-    if isinstance(data, dict) and 'date' in data:
+    if isinstance(data, dict) and isinstance(data.get('date'), list):
+        app.logger.info("[DEBUG] Dados já estão no formato correto (dict de listas)")
         return data
     # Se vier como orient='split'
     if isinstance(data, dict) and 'columns' in data and 'data' in data:
@@ -33,8 +34,7 @@ def convert_to_col_dict(data):
             return {}
         if not values:
             app.logger.warning("[DEBUG] values vazio!")
-            return {col: [] for col in columns}
-        try:
+            return {col: [] for col in columns}        try:
             # Garante que values é lista de listas
             if isinstance(values[0], list):
                 transposed = list(zip(*values))
@@ -43,6 +43,16 @@ def convert_to_col_dict(data):
                 transposed = [[v] for v in values]
             app.logger.info("[DEBUG] transposed: %s", transposed)
             result = {col: list(transposed[i]) for i, col in enumerate(columns)}
+            
+            # Se temos date_display na coluna, garantimos que está disponível para o template
+            if 'date_display' in result:
+                app.logger.info("[DEBUG] date_display encontrado nos dados")
+            else:
+                app.logger.info("[DEBUG] date_display não encontrado nos dados")
+                # Se não existe o date_display mas temos date, usamos date como fallback
+                if 'date' in result:
+                    result['date_display'] = result['date']
+                
             app.logger.info("[DEBUG] convert_to_col_dict result: %s", result)
             return result
         except Exception as e:
@@ -67,9 +77,8 @@ def index():
         r = requests.get(f"{API_URL}/predict", timeout=10)
         r.raise_for_status()
         pred = r.json()
-        app.logger.info("[DEBUG] /predict raw: %s", pred)
-        if 'data' in pred:
-            pred['data'] = convert_to_col_dict(pred)
+        app.logger.info("[DEBUG] /predict raw: %s", pred)        if 'data' in pred:
+            pred['data'] = convert_to_col_dict(pred['data'])
             app.logger.info("[DEBUG] /predict converted: %s", pred['data'])
     except requests.exceptions.RequestException as e:
         app.logger.error("Erro ao acessar API /predict: %s", e)
@@ -84,9 +93,8 @@ def index():
         r_hist = requests.get(f"{API_URL}/history?limit=10", timeout=10)
         r_hist.raise_for_status()
         hist = r_hist.json()
-        app.logger.info("[DEBUG] /history raw: %s", hist)
-        if 'data' in hist:
-            hist['data'] = convert_to_col_dict(hist)
+        app.logger.info("[DEBUG] /history raw: %s", hist)        if 'data' in hist:
+            hist['data'] = convert_to_col_dict(hist['data']) 
             app.logger.info("[DEBUG] /history converted: %s", hist['data'])
     except requests.exceptions.RequestException as e:
         app.logger.error("Erro ao acessar API /history: %s", e)
