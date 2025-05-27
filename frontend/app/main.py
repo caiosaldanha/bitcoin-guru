@@ -90,6 +90,19 @@ def index():
     except Exception as e:
         app.logger.error("Erro ao processar dados de /history: %s", e)
         hist = {'error': f'Erro ao processar dados: {e}'}
+      # Tentar obter dados técnicos para o dashboard
+    try:
+        app.logger.info("Buscando dados técnicos em %s", f"{API_URL}/technical_data?days=30")
+        r_tech = requests.get(f"{API_URL}/technical_data?days=30", timeout=10)
+        r_tech.raise_for_status()
+        tech_data = r_tech.json()
+        app.logger.info("[DEBUG] /technical_data raw: %s", tech_data)
+    except requests.exceptions.RequestException as e:
+        app.logger.error("Erro ao acessar API /technical_data: %s", e)
+        tech_data = {'error': f'Erro ao acessar API /technical_data: {e}'}
+    except Exception as e:
+        app.logger.error("Erro ao processar dados de /technical_data: %s", e)
+        tech_data = {'error': f'Erro ao processar dados: {e}'}
     
     # Tentar obter preços históricos para o gráfico
     try:
@@ -118,7 +131,7 @@ def index():
         except Exception as e:
             app.logger.error("Falha ao inicializar backend: %s", e)
     
-    return render_template("index.html", pred=pred, hist=hist, prices=prices)
+    return render_template("index.html", pred=pred, hist=hist, prices=prices, tech_data=tech_data)
 
 @app.route("/clear_predictions")
 def clear_predictions():

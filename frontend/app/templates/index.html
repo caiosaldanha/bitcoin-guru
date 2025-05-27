@@ -199,22 +199,86 @@
             {% else %}
                 <div class="alert alert-warning">Dados de cotações não disponíveis.</div>
             {% endif %}
-        </div>
-
-        <div class="chart-card">
-            <h4 class="mb-4"><i class="fas fa-chart-line me-2 text-primary"></i>Projeção da Cotação para 7 dias</h4>
-            {% if hist.get('error') %}
-                <div class="alert alert-danger">{{ hist['error'] }}</div>
-            {% elif hist.get('date') %}
+        </div>        <div class="chart-card">
+            <h4 class="mb-4"><i class="fas fa-chart-bar me-2 text-primary"></i>Dashboard de Performance e Análise Técnica</h4>
+            {% if pred.get('error') %}
+                <div class="alert alert-danger">{{ pred['error'] }}</div>
+            {% elif pred.get('date') and prices.get('date') and tech_data and not tech_data.get('error') %}
                 <div class="row mb-4">
-                    <div class="col-lg-8 d-flex align-items-center justify-content-center">
-                        <div class="chart-container w-100" style="min-height:350px; min-width:100%;">
-                            <canvas id="forecastChart" width="600" height="340" style="display:block; background:#fff;"></canvas>
+                    <!-- Gráfico de Evolução da Performance do Modelo -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-brain me-2"></i>Performance do Modelo IA</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" style="height: 250px;">
+                                    <canvas id="modelPerformanceChart"></canvas>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <small class="text-muted">MAE Atual</small>
+                                            <div class="fw-bold text-info">${{ pred['mae_train'][0]|round(2) }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">R² Atual</small>
+                                            <div class="fw-bold text-success">{{ (pred['r2_train'][0] * 100)|round(1) }}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Gráfico de Análise de Volatilidade -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Análise de Volatilidade</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" style="height: 250px;">
+                                    <canvas id="volatilityChart"></canvas>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="text-center">
+                                        <small class="text-muted">Índice de Volatilidade (últimos 7 dias)</small>
+                                        <div class="fw-bold text-warning" id="volatilityIndex">Calculando...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gráfico Principal: Preços com Indicadores Técnicos -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-chart-area me-2"></i>Análise Técnica Completa (30 dias)</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" style="height: 400px;">
+                                    <canvas id="technicalAnalysisChart"></canvas>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>Como interpretar:</strong> 
+                                            A linha azul mostra os preços históricos, as linhas verdes são médias móveis (7 e 14 dias), 
+                                            e as barras mostram a volatilidade diária. O ponto vermelho indica a previsão para os próximos 7 dias.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             {% else %}
-                <div class="alert alert-warning">Sem histórico de previsões disponível.</div>
+                <div class="alert alert-warning">Dados insuficientes para exibir o dashboard. É necessário ter dados de previsão, preços e histórico.</div>
             {% endif %}
         </div>
     </div>
@@ -226,58 +290,210 @@
     <!-- Botão para limpar as previsões - ficará no canto esquerdo inferior -->
     <a href="/clear_predictions" class="btn btn-warning" style="position: fixed; bottom: 20px; left: 20px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" title="Limpar projeções de cotação">
         <i class="fas fa-trash"></i>
-    </a>
+    </a>    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {# --- Dashboard Técnico --- #}
+    {% if pred.get('date') and prices.get('date') and tech_data and not tech_data.get('error') %}
+        <script type="text/javascript">
+            // Dados do backend
+            var techData = {{ tech_data|tojson|safe }};
+            var predData = {
+                currentPrice: {{ pred['price_now'][0] }},
+                futurePrice: {{ pred['pred_7d'][0] }},
+                mae: {{ pred['mae_train'][0] }},
+                r2: {{ pred['r2_train'][0] }}
+            };
 
-    {# --- Prepare JS variables for forecast and prices charts outside of <script> tags --- #}
-    {% if not hist.get('error') and hist.get('date') %}
-        {% set forecastDates = hist['date']|tojson %}
-        {% set forecastPrices = hist['pred_7d']|tojson %}
-        <script type="text/javascript">
-            var chartLabels = {{ forecastDates|safe }};
-            var chartData = {{ forecastPrices|safe }};
-            var currentDate = null;
-        </script>
-        <script type="text/javascript">
-            new Chart(document.getElementById('forecastChart'), {
-                type: 'line',
-                data: {
-                    labels: chartLabels,
-                    datasets: [{
-                        label: 'Cotação Projetada (USD)',
-                        data: chartData,
-                        borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                title: function(tooltipItems) {
-                                    var item = tooltipItems[0];
-                                    var date = chartLabels[item.dataIndex];
-                                    return (currentDate && date === currentDate) ? "Data Atual" : "Data Projetada";
+            // 1. Gráfico de Performance do Modelo
+            var performanceCtx = document.getElementById('modelPerformanceChart');
+            if (performanceCtx && techData.performance_history && techData.performance_history.length > 0) {
+                new Chart(performanceCtx, {
+                    type: 'line',
+                    data: {
+                        labels: techData.performance_history.map(p => p.date),
+                        datasets: [
+                            {
+                                label: 'MAE (Erro Médio)',
+                                data: techData.performance_history.map(p => p.mae),
+                                borderColor: 'rgb(220, 53, 69)',
+                                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'R² (Precisão %)',
+                                data: techData.performance_history.map(p => p.r2 * 100),
+                                borderColor: 'rgb(25, 135, 84)',
+                                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: { display: true, text: 'MAE ($)' }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: { display: true, text: 'Precisão (%)' },
+                                grid: { drawOnChartArea: false }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: true }
+                        }
+                    }
+                });
+            }
+
+            // 2. Gráfico de Volatilidade
+            var volatilityCtx = document.getElementById('volatilityChart');
+            if (volatilityCtx && techData.ret_1d) {
+                var volatilityData = techData.ret_1d.map(ret => Math.abs(ret * 100));
+                document.getElementById('volatilityIndex').textContent = techData.volatility_7d + '%';
+                
+                new Chart(volatilityCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: techData.dates.slice(-15), // Últimos 15 dias
+                        datasets: [{
+                            label: 'Volatilidade Diária (%)',
+                            data: volatilityData.slice(-15),
+                            backgroundColor: function(context) {
+                                var value = context.parsed.y;
+                                if (value > 5) return 'rgba(220, 53, 69, 0.8)'; // Alto risco
+                                if (value > 2) return 'rgba(255, 193, 7, 0.8)'; // Médio risco
+                                return 'rgba(25, 135, 84, 0.8)'; // Baixo risco
+                            },
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Volatilidade (%)' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 3. Análise Técnica Completa
+            var technicalCtx = document.getElementById('technicalAnalysisChart');
+            if (technicalCtx && techData.prices) {
+                // Adicionar ponto de previsão
+                var extendedDates = [...techData.dates];
+                var extendedPrices = [...techData.prices];
+                var extendedMA7 = [...techData.ma_7];
+                var extendedMA14 = [...techData.ma_14];
+                
+                // Projeção
+                var futureDate = new Date();
+                futureDate.setDate(futureDate.getDate() + 7);
+                extendedDates.push(futureDate.toISOString().split('T')[0]);
+                extendedPrices.push(null);
+                extendedMA7.push(null);
+                extendedMA14.push(null);
+                
+                var predictionData = new Array(techData.prices.length).fill(null);
+                predictionData.push(predData.currentPrice);
+                predictionData.push(predData.futurePrice);
+
+                new Chart(technicalCtx, {
+                    type: 'line',
+                    data: {
+                        labels: extendedDates,
+                        datasets: [
+                            {
+                                label: 'Preço (USD)',
+                                data: extendedPrices,
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Média Móvel 7 dias',
+                                data: extendedMA7,
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                borderWidth: 1,
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Média Móvel 14 dias',
+                                data: extendedMA14,
+                                borderColor: 'rgb(153, 102, 255)',
+                                backgroundColor: 'rgba(153, 102, 255, 0.1)',
+                                borderWidth: 1,
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Previsão 7 dias',
+                                data: predictionData,
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                borderWidth: 3,
+                                borderDash: [5, 5],
+                                pointRadius: 6,
+                                pointHoverRadius: 8,
+                                fill: false,
+                                tension: 0.1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        if (context.parsed.y !== null) {
+                                            return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+                                        }
+                                        return '';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: { display: true, text: 'Data' }
+                            },
+                            y: {
+                                display: true,
+                                title: { display: true, text: 'Preço (USD)' },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
                                 }
                             }
                         }
-                    },
-                    scales: {
-                        y: {
-                            ticks: { callback: function(value) { return '$' + value.toLocaleString(); } }
-                        }
                     }
-                }
-            });
+                });
+            }
         </script>
     {% endif %}
 
